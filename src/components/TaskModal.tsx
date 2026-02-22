@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useStore } from '../store/useStore';
 import type { Goal, Task, TaskType } from '../store/useStore';
 import { X, Calendar } from 'lucide-react';
-import { format, addDays } from 'date-fns';
+import { format } from 'date-fns';
 
 interface TaskModalProps {
     goal?: Goal;
@@ -24,7 +24,7 @@ export default function TaskModal({ goal, task, requireEvaluation = false, onClo
     const [weeklyHours, setWeeklyHours] = useState(task?.weeklyHours?.toString() || '2');
 
     const [startDate, setStartDate] = useState(task?.startDate || format(new Date(), 'yyyy-MM-dd'));
-    const [endDate, setEndDate] = useState(task?.endDate || format(addDays(new Date(), 30), 'yyyy-MM-dd'));
+    const [endDate, setEndDate] = useState(task?.endDate || '2026-12-31');
 
     const [painScore, setPainScore] = useState(task?.painScore || 5);
     const [passionScore, setPassionScore] = useState(task?.passionScore || 5);
@@ -122,6 +122,7 @@ export default function TaskModal({ goal, task, requireEvaluation = false, onClo
                                 <input
                                     type="date"
                                     value={startDate}
+                                    max="2027-02-22"
                                     onChange={e => setStartDate(e.target.value)}
                                     className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none text-sm"
                                 />
@@ -131,6 +132,7 @@ export default function TaskModal({ goal, task, requireEvaluation = false, onClo
                                 <input
                                     type="date"
                                     value={endDate}
+                                    max="2027-02-22"
                                     onChange={e => setEndDate(e.target.value)}
                                     className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none text-sm"
                                 />

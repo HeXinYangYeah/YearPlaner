@@ -4,6 +4,7 @@ import type { Goal, Task } from '../store/useStore';
 import { Plus, Clock, Edit2, Trash2, AlertTriangle, BrainCircuit, Target, CheckCircle2, Calendar } from 'lucide-react';
 import TaskModal from './TaskModal';
 import GoalTimeModal from './GoalTimeModal';
+import { eachWeekOfInterval, parseISO, startOfWeek, endOfWeek, format } from 'date-fns';
 
 export default function TaskDecomposition() {
     const { goals, tasks, removeTask, timeBudget } = useStore();
@@ -19,33 +20,60 @@ export default function TaskDecomposition() {
         goalsByDomain[g.domain].push(g);
     });
 
-    // Time budget calculation
+    // Time budget calculation: Week-by-Week
     const totalUsed = timeBudget.workHours + timeBudget.sleepHours + timeBudget.necessaryHours;
     const availableWeekly = 168 - totalUsed;
 
-    let plannedWeeklyHours = 0;
-    tasks.forEach(task => {
-        if (!task.hidden) {
-            if (task.weeklyHours) {
-                plannedWeeklyHours += task.weeklyHours;
-            } else if (task.dailyMinutes && task.weeklyFrequency) {
-                plannedWeeklyHours += (task.dailyMinutes * task.weeklyFrequency) / 60;
+    // Calculate load for each week from now until end of year
+    const startOfAnalysis = startOfWeek(new Date());
+    const endOfAnalysis = parseISO('2026-12-31');
+    const weeks = eachWeekOfInterval({ start: startOfAnalysis, end: endOfAnalysis });
+
+    const weeklyLoad = weeks.map(weekStart => {
+        const weekEnd = endOfWeek(weekStart);
+        let totalHours = 0;
+
+        // Sum from tasks
+        tasks.forEach(task => {
+            if (task.hidden) return;
+            const taskStart = parseISO(task.startDate);
+            const taskEnd = parseISO(task.endDate);
+
+            // Check if task is active during this week
+            const isActive = (taskStart <= weekEnd && taskEnd >= weekStart);
+            if (isActive) {
+                if (task.weeklyHours) {
+                    totalHours += task.weeklyHours;
+                } else if (task.dailyMinutes && task.weeklyFrequency) {
+                    totalHours += (task.dailyMinutes * task.weeklyFrequency) / 60;
+                }
             }
-        }
+        });
+
+        // Sum from non-decomposed goals
+        goals.forEach(goal => {
+            const goalTasks = tasks.filter(t => t.goalId === goal.id);
+            if (goalTasks.length === 0 && goal.startDate && goal.endDate) {
+                const gStart = parseISO(goal.startDate);
+                const gEnd = parseISO(goal.endDate);
+                const isActive = (gStart <= weekEnd && gEnd >= weekStart);
+                if (isActive) {
+                    if (goal.weeklyHours) {
+                        totalHours += goal.weeklyHours;
+                    } else if (goal.dailyMinutes) {
+                        totalHours += (goal.dailyMinutes * 7) / 60;
+                    }
+                }
+            }
+        });
+
+        return { start: weekStart, end: weekEnd, totalHours };
     });
 
-    goals.forEach(goal => {
-        const goalTasks = tasks.filter(t => t.goalId === goal.id);
-        if (goalTasks.length === 0) {
-            if (goal.weeklyHours) {
-                plannedWeeklyHours += goal.weeklyHours;
-            } else if (goal.dailyMinutes) {
-                plannedWeeklyHours += (goal.dailyMinutes * 7) / 60;
-            }
-        }
-    });
-
-    const isOverBudget = plannedWeeklyHours > availableWeekly;
+    const overBudgetWeeks = weeklyLoad.filter(w => w.totalHours > availableWeekly);
+    const maxLoadWeek = [...weeklyLoad].sort((a, b) => b.totalHours - a.totalHours)[0];
+    const isOverBudget = overBudgetWeeks.length > 0;
+    const peakHours = maxLoadWeek?.totalHours || 0;
 
     if (goals.length === 0) {
         return (
@@ -74,9 +102,9 @@ export default function TaskDecomposition() {
 
                 <div className="flex items-center gap-6 px-6 py-3 bg-slate-50 rounded-2xl border border-slate-100">
                     <div className="flex flex-col">
-                        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Planned</span>
+                        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Peak Load</span>
                         <span className={`text-xl font-bold font-serif ${isOverBudget ? 'text-red-500' : 'text-slate-700'}`}>
-                            {plannedWeeklyHours.toFixed(1)} <span className="text-sm font-sans text-slate-400">h</span>
+                            {peakHours.toFixed(1)} <span className="text-sm font-sans text-slate-400">h/周</span>
                         </span>
                     </div>
                     <div className="w-px h-8 bg-slate-200"></div>
@@ -123,11 +151,12 @@ export default function TaskDecomposition() {
                         <div className="flex-1 space-y-3">
                             <h3 className="text-xl font-bold text-red-800 flex items-center gap-2">
                                 <AlertTriangle className="text-red-500" />
-                                时间预算严重超支！
+                                发现 {overBudgetWeeks.length} 个时间段预算超支！
                             </h3>
                             <p className="text-red-600/80 text-sm leading-relaxed">
-                                你规划的任务总耗时 ({plannedWeeklyHours.toFixed(1)}h) 已经超过了每周实际可用的时间 ({availableWeekly.toFixed(1)}h)。
-                                贪多嚼不烂，为了保证执行率，请进行取舍。
+                                峰值周负载为 {peakHours.toFixed(1)}h/周，超出了每周实际可用的 {availableWeekly.toFixed(1)}h。
+                                主要超支集中在：{format(overBudgetWeeks[0].start, 'M/d')} - {format(overBudgetWeeks[overBudgetWeeks.length - 1].end, 'M/d')} 期间。
+                                为了保证执行率，请进行调整或取舍。
                             </p>
                         </div>
 
@@ -168,13 +197,20 @@ export default function TaskDecomposition() {
                                 return (
                                     <div key={goal.id} className="border border-slate-100 rounded-2xl p-5 bg-slate-50/50 hover:bg-slate-50 transition-colors">
                                         <div className="flex justify-between items-center mb-4">
-                                            <h4 className="font-bold text-slate-700 text-lg">{goal.title}</h4>
+                                            <div className="flex flex-col">
+                                                <h4 className="font-bold text-slate-700 text-lg">{goal.title}</h4>
+                                                {!isDecomposed && !goal.startDate && (
+                                                    <span className="text-[10px] font-bold text-red-400 bg-red-50 px-2 py-0.5 rounded-md mt-1 w-fit flex items-center gap-1">
+                                                        <AlertTriangle size={10} /> 尚未设置起止时间与预算
+                                                    </span>
+                                                )}
+                                            </div>
                                             {!isDecomposed && (
                                                 <button
                                                     onClick={() => setActiveGoalForTime(goal)}
-                                                    className="text-xs text-indigo-600 hover:text-indigo-700 bg-indigo-50 px-3 py-1.5 rounded-xl font-bold transition hover:scale-105"
+                                                    className={`text-xs px-3 py-1.5 rounded-xl font-bold transition hover:scale-105 ${!goal.startDate ? 'bg-red-500 text-white shadow-sm ring-2 ring-red-100' : 'text-indigo-600 bg-indigo-50 hover:text-indigo-700'}`}
                                                 >
-                                                    直接估算时间
+                                                    {!goal.startDate ? '去设置时间' : '修改估算时间'}
                                                 </button>
                                             )}
                                         </div>

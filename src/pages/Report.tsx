@@ -55,7 +55,7 @@ export default function Report() {
                 {/* Hero Title Area */}
                 <div className="text-center space-y-4 pt-4 pb-8 relative">
                     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-indigo-200/30 rounded-full blur-3xl pointer-events-none -z-10"></div>
-                    <p className="text-indigo-500 font-bold uppercase tracking-widest text-sm drop-shadow-sm">202X 年度计划报告</p>
+                    <p className="text-indigo-500 font-bold uppercase tracking-widest text-sm drop-shadow-sm">2026 年度计划执行报告</p>
                     <h1 className="text-5xl md:text-7xl font-black text-slate-800 font-serif italic max-w-4xl mx-auto leading-tight drop-shadow-md">
                         "{theme}"
                     </h1>

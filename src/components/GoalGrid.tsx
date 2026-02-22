@@ -34,7 +34,7 @@ export default function GoalGrid() {
                                 className="col-span-2 md:col-span-1 md:row-span-1 min-h-[160px] md:min-h-full gradient-primary rounded-[2rem] md:rounded-full shadow-soft-hover flex flex-col items-center justify-center p-8 text-white transform hover:scale-105 transition-all duration-500 relative overflow-hidden group border-2 border-white/20 backdrop-blur-xl z-10"
                             >
                                 <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-10 transition-opacity duration-300 pointer-events-none"></div>
-                                <h3 className="text-xs md:text-sm font-bold mb-2 opacity-70 tracking-[0.2em] uppercase">202X Theme</h3>
+                                <h3 className="text-xs md:text-sm font-bold mb-2 opacity-70 tracking-[0.2em] uppercase">2026 Theme</h3>
 
                                 {isEditingTheme ? (
                                     <div className="flex flex-col items-center space-y-3 relative z-20 w-full px-4">

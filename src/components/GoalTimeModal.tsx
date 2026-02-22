@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useStore } from '../store/useStore';
 import type { Goal } from '../store/useStore';
+import { format } from 'date-fns';
 import { X } from 'lucide-react';
 
 interface GoalTimeModalProps {
@@ -15,8 +16,8 @@ export default function GoalTimeModal({ goal, onClose }: GoalTimeModalProps) {
     const [dailyMinutes, setDailyMinutes] = useState(goal.dailyMinutes?.toString() || '60');
     const [weeklyHours, setWeeklyHours] = useState(goal.weeklyHours?.toString() || '7');
 
-    const [startDate, setStartDate] = useState(goal.startDate || '');
-    const [endDate, setEndDate] = useState(goal.endDate || '');
+    const [startDate, setStartDate] = useState(goal.startDate || format(new Date(), 'yyyy-MM-dd'));
+    const [endDate, setEndDate] = useState(goal.endDate || '2026-12-31');
 
     const handleSave = () => {
         if (!startDate || !endDate) {
@@ -53,11 +54,11 @@ export default function GoalTimeModal({ goal, onClose }: GoalTimeModalProps) {
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-xs font-medium text-slate-500 mb-1">开始日期</label>
-                            <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none text-sm" />
+                            <input type="date" value={startDate} max="2027-02-22" onChange={e => setStartDate(e.target.value)} className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none text-sm" />
                         </div>
                         <div>
                             <label className="block text-xs font-medium text-slate-500 mb-1">结束日期</label>
-                            <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none text-sm" />
+                            <input type="date" value={endDate} max="2027-02-22" onChange={e => setEndDate(e.target.value)} className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none text-sm" />
                         </div>
                     </div>
 

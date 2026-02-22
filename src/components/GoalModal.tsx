@@ -142,26 +142,18 @@ export default function GoalModal({ domain, isOpen, onClose }: GoalModalProps) {
                                 </div>
                                 <div className="flex gap-4 overflow-x-auto pb-6 snap-x snap-mandatory hide-scrollbars -mx-6 px-6 md:mx-0 md:px-0 scroll-smooth">
                                     {EXAMPLES[domain]?.map((ex, idx) => (
-                                        <div key={idx} className="snap-center shrink-0 w-[280px] md:w-[300px] bg-white rounded-3xl p-5 shadow-soft border border-emerald-50 flex flex-col h-full">
+                                        <div key={idx} className="snap-center shrink-0 w-[240px] md:w-[260px] bg-white rounded-3xl p-6 shadow-soft border border-emerald-50 flex flex-col items-center text-center justify-between group hover:border-indigo-200 transition-colors">
                                             <div className="mb-4">
-                                                <div className="text-xs font-bold text-slate-400 mb-1">模糊愿景</div>
-                                                <h5 className="font-bold font-serif text-lg text-slate-800 leading-snug">{ex.vague}</h5>
-                                            </div>
-                                            <div className="flex-1 mb-4">
-                                                <div className="text-[11px] font-bold text-emerald-500 mb-2">可孵化的年度目标</div>
-                                                <ul className="text-sm text-slate-600 space-y-1">
-                                                    {ex.specific.map((sp, i) => (
-                                                        <li key={i} className="flex gap-2 items-start">
-                                                            <span className="text-emerald-300 inline-block shrink-0 mt-1">•</span>
-                                                            <span className="leading-tight">{sp}</span>
-                                                        </li>
-                                                    ))}
-                                                </ul>
+                                                <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-500 mb-4 mx-auto group-hover:scale-110 transition-transform">
+                                                    <Lightbulb size={24} />
+                                                </div>
+                                                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">愿景灵感</div>
+                                                <h5 className="font-bold font-serif text-lg text-slate-800 leading-snug px-2">{ex.vague}</h5>
                                             </div>
                                             <button
                                                 onClick={() => handleAdd(ex.vague)}
                                                 disabled={domainGoals.length >= 3}
-                                                className="mt-auto w-full py-2.5 bg-slate-50 hover:bg-emerald-50 text-slate-600 hover:text-emerald-600 font-bold rounded-xl text-sm transition disabled:opacity-50"
+                                                className="w-full py-3 bg-slate-50 hover:bg-indigo-600 text-slate-600 hover:text-white font-bold rounded-2xl text-sm transition-all disabled:opacity-50"
                                             >
                                                 直接选用
                                             </button>

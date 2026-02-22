@@ -1,5 +1,4 @@
 import { useStore } from '../store/useStore';
-import type { Task, Goal } from '../store/useStore';
 import { differenceInDays, parseISO, startOfYear, endOfYear, getDayOfYear } from 'date-fns';
 
 const DOMAIN_COLORS: Record<string, string> = {
@@ -30,15 +29,32 @@ export default function GanttChart() {
     const yearEnd = endOfYear(new Date(currentYear, 11, 31));
     const totalDays = differenceInDays(yearEnd, yearStart) + 1; // 365 or 366
 
-    // Group tasks by goal Domain
-    const grouped: Record<string, { task: Task; goal: Goal }[]> = {};
+    // Group items (tasks or un-decomposed goals) by domain
+    const grouped: Record<string, { title: string; startDate: string; endDate: string; isVision?: boolean }[]> = {};
 
     visibleTasks.forEach(task => {
         const goal = goals.find(g => g.id === task.goalId);
         if (!goal) return;
-
         if (!grouped[goal.domain]) grouped[goal.domain] = [];
-        grouped[goal.domain].push({ task, goal });
+        grouped[goal.domain].push({
+            title: task.title,
+            startDate: task.startDate,
+            endDate: task.endDate
+        });
+    });
+
+    // Also include goals without tasks
+    goals.forEach(goal => {
+        const goalTasks = tasks.filter(t => t.goalId === goal.id && !t.hidden);
+        if (goalTasks.length === 0 && goal.startDate && goal.endDate) {
+            if (!grouped[goal.domain]) grouped[goal.domain] = [];
+            grouped[goal.domain].push({
+                title: goal.title,
+                startDate: goal.startDate,
+                endDate: goal.endDate,
+                isVision: true
+            });
+        }
     });
 
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -77,10 +93,10 @@ export default function GanttChart() {
 
                                 {/* Task Capsule Bars */}
                                 <div className="relative min-h-[32px] space-y-3 px-2">
-                                    {items.map(({ task }, idx) => {
+                                    {items.map((item, idx) => {
                                         try {
-                                            const start = parseISO(task.startDate);
-                                            const end = parseISO(task.endDate);
+                                            const start = parseISO(item.startDate);
+                                            const end = parseISO(item.endDate);
 
                                             const displayStart = start < yearStart ? yearStart : start;
                                             const displayEnd = end > yearEnd ? yearEnd : end;
@@ -92,18 +108,20 @@ export default function GanttChart() {
 
                                             const leftPct = (startDay / totalDays) * 100;
                                             const widthPct = (duration / totalDays) * 100;
-                                            const gradientClass = DOMAIN_COLORS[domain] || 'bg-slate-400';
+                                            const gradientClass = item.isVision
+                                                ? 'bg-slate-200 border-2 border-indigo-400 border-dashed'
+                                                : (DOMAIN_COLORS[domain] || 'bg-slate-400');
 
                                             return (
-                                                <div key={task.id} className="relative h-8 group/task" style={{ marginTop: idx > 0 ? '12px' : '0' }}>
+                                                <div key={`${item.title}-${idx}`} className="relative h-8 group/task" style={{ marginTop: idx > 0 ? '12px' : '0' }}>
                                                     <div
-                                                        className={`absolute h-full rounded-full shadow-md ${gradientClass} transition-transform hover:scale-[1.02] cursor-pointer flex items-center justify-center overflow-hidden`}
+                                                        className={`absolute h-full rounded-full shadow-sm ${gradientClass} transition-transform hover:scale-[1.02] cursor-pointer flex items-center justify-center overflow-hidden`}
                                                         style={{ left: `${leftPct}%`, width: `${widthPct}%` }}
-                                                        title={`${task.title} (${task.startDate} 至 ${task.endDate})`}
+                                                        title={`${item.isVision ? '[愿景] ' : ''}${item.title} (${item.startDate} 至 ${item.endDate})`}
                                                     >
                                                         {widthPct > 8 && (
-                                                            <span className="px-3 text-xs text-white font-bold truncate drop-shadow-sm pointer-events-none">
-                                                                {task.title}
+                                                            <span className={`px-3 text-xs font-bold truncate drop-shadow-sm pointer-events-none ${item.isVision ? 'text-indigo-600' : 'text-white'}`}>
+                                                                {item.isVision && '🎯 '}{item.title}
                                                             </span>
                                                         )}
                                                     </div>
