@@ -7,10 +7,11 @@ import { format, addDays } from 'date-fns';
 interface TaskModalProps {
     goal?: Goal;
     task?: Task;
+    requireEvaluation?: boolean;
     onClose: () => void;
 }
 
-export default function TaskModal({ goal, task, onClose }: TaskModalProps) {
+export default function TaskModal({ goal, task, requireEvaluation = false, onClose }: TaskModalProps) {
     const { addTask, updateTask } = useStore();
     const isEditing = !!task;
 
@@ -168,31 +169,31 @@ export default function TaskModal({ goal, task, onClose }: TaskModalProps) {
                         </div>
                     </div>
 
-                    <div className="h-px bg-slate-100"></div>
+                    {/* Evaluation Scores - Only shown when requireEvaluation is true */}
+                    {requireEvaluation && (
+                        <div className="space-y-4">
+                            <div className="h-px bg-slate-100"></div>
+                            <h3 className="font-semibold text-slate-800 text-sm">评估打分 (1-10分) <span className="text-xs font-normal text-slate-400 ml-2">用于智能取舍</span></h3>
 
-                    {/* Evaluation Scores */}
-                    <div className="space-y-4">
-                        <h3 className="font-semibold text-slate-800 text-sm">评估打分 (1-10分) <span className="text-xs font-normal text-slate-400 ml-2">用于计划超支时的智能取舍</span></h3>
-
-                        <div className="space-y-3">
-                            <div className="flex items-center gap-4">
-                                <label className="w-20 text-xs text-slate-600 font-medium">痛苦分</label>
-                                <input type="range" min="1" max="10" value={painScore} onChange={e => setPainScore(parseInt(e.target.value))} className="flex-1 accent-red-500" />
-                                <span className="w-6 text-sm font-bold text-red-600 text-right">{painScore}</span>
-                            </div>
-                            <div className="flex items-center gap-4">
-                                <label className="w-20 text-xs text-slate-600 font-medium">热情分</label>
-                                <input type="range" min="1" max="10" value={passionScore} onChange={e => setPassionScore(parseInt(e.target.value))} className="flex-1 accent-orange-500" />
-                                <span className="w-6 text-sm font-bold text-orange-600 text-right">{passionScore}</span>
-                            </div>
-                            <div className="flex items-center gap-4">
-                                <label className="w-20 text-xs text-slate-600 font-medium">时机分</label>
-                                <input type="range" min="1" max="10" value={timingScore} onChange={e => setTimingScore(parseInt(e.target.value))} className="flex-1 accent-blue-500" />
-                                <span className="w-6 text-sm font-bold text-blue-600 text-right">{timingScore}</span>
+                            <div className="space-y-3">
+                                <div className="flex items-center gap-4">
+                                    <label className="w-20 text-xs text-slate-600 font-medium">痛苦分</label>
+                                    <input type="range" min="1" max="10" value={painScore} onChange={e => setPainScore(parseInt(e.target.value))} className="flex-1 accent-red-500" />
+                                    <span className="w-6 text-sm font-bold text-red-600 text-right">{painScore}</span>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                    <label className="w-20 text-xs text-slate-600 font-medium">热情分</label>
+                                    <input type="range" min="1" max="10" value={passionScore} onChange={e => setPassionScore(parseInt(e.target.value))} className="flex-1 accent-orange-500" />
+                                    <span className="w-6 text-sm font-bold text-orange-600 text-right">{passionScore}</span>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                    <label className="w-20 text-xs text-slate-600 font-medium">时机分</label>
+                                    <input type="range" min="1" max="10" value={timingScore} onChange={e => setTimingScore(parseInt(e.target.value))} className="flex-1 accent-blue-500" />
+                                    <span className="w-6 text-sm font-bold text-blue-600 text-right">{timingScore}</span>
+                                </div>
                             </div>
                         </div>
-                    </div>
-
+                    )}
                 </div>
 
                 <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-3">

@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap');
 @import "tailwindcss";
 
 @theme {
@@ -8,12 +9,51 @@
   --color-primary-700: #1d4ed8;
   --color-secondary-50: #fdf4ff;
   --color-secondary-500: #d946ef;
-  
+
   --font-sans: 'Inter', system-ui, sans-serif;
+  --font-serif: 'Playfair Display', Georgia, serif;
+
+  --shadow-soft: 0 20px 40px -10px rgba(0, 0, 0, 0.05), 0 10px 20px -5px rgba(0, 0, 0, 0.02);
+  --shadow-soft-hover: 0 25px 50px -12px rgba(0, 0, 0, 0.08), 0 15px 25px -7px rgba(0, 0, 0, 0.04);
 }
 
 @layer base {
   body {
-    @apply bg-slate-50 text-slate-900 antialiased;
+    @apply bg-[#f8f9fa] text-[#333333] antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-serif;
+  }
+}
+
+@layer utilities {
+  .glass-panel {
+    @apply bg-white/70 backdrop-blur-md border border-white/40 shadow-soft;
+  }
+
+  .glass-overlay {
+    @apply bg-black/30 backdrop-blur-sm;
+  }
+
+  .gradient-primary {
+    @apply bg-gradient-to-br from-[#1e1b4b] via-[#4c1d95] to-[#7c3aed];
+  }
+
+  .gradient-accent {
+    @apply bg-gradient-to-r from-[#8b5cf6] to-[#ec4899];
+  }
+
+  .gradient-coral {
+    @apply bg-gradient-to-br from-[#feccb1] to-[#ff9a9e];
+  }
+
+  .text-gradient {
+    @apply bg-clip-text text-transparent;
   }
 }

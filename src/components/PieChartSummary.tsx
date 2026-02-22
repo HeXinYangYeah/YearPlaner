@@ -6,14 +6,14 @@ import { differenceInDays, parseISO } from 'date-fns';
 ChartJS.register(ArcElement, Tooltip, Legend);
 
 const DOMAIN_COLORS: Record<string, string> = {
-    '职业发展': '#3b82f6', // blue-500
-    '财务': '#10b981', // emerald-500
-    '健康': '#ef4444', // red-500
-    '家庭': '#f97316', // orange-500
-    '社交': '#a855f7', // purple-500
-    '学习': '#6366f1', // indigo-500
-    '休闲': '#ec4899', // pink-500
-    '个人成长': '#f59e0b' // amber-500
+    '学习成长': '#3b82f6',
+    '体验突破': '#f43f5e',
+    '休闲娱乐': '#ec4899',
+    '工作事业': '#6366f1',
+    '家庭生活': '#f97316',
+    '身体健康': '#10b981',
+    '财务理财': '#f59e0b',
+    '人际社群': '#8b5cf6'
 };
 
 export default function PieChartSummary() {
@@ -75,16 +75,40 @@ export default function PieChartSummary() {
             {
                 data: dataValues,
                 backgroundColor: bgColors,
-                borderWidth: 2,
+                borderWidth: 4,
                 borderColor: '#ffffff',
+                hoverOffset: 8
             },
         ],
     };
 
     const options = {
+        maintainAspectRatio: false,
         plugins: {
-            legend: { position: 'right' as const },
+            legend: {
+                position: 'right' as const,
+                labels: {
+                    usePointStyle: true,
+                    padding: 20,
+                    font: {
+                        family: 'Inter, sans-serif',
+                        size: 13,
+                        weight: 'bold' as const
+                    },
+                    color: '#475569'
+                }
+            },
             tooltip: {
+                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                titleColor: '#1e293b',
+                bodyColor: '#475569',
+                borderColor: '#f1f5f9',
+                borderWidth: 1,
+                padding: 12,
+                boxPadding: 6,
+                usePointStyle: true,
+                titleFont: { family: 'Inter', size: 14, weight: 'bold' as const },
+                bodyFont: { family: 'Inter', size: 13, weight: 'normal' as const },
                 callbacks: {
                     label: function (context: any) {
                         let label = context.label || '';
@@ -102,9 +126,9 @@ export default function PieChartSummary() {
     };
 
     return (
-        <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm flex flex-col items-center justify-center h-full">
-            <h3 className="text-lg font-bold text-slate-800 mb-4 w-full text-left">时间投入占比</h3>
-            <div className="w-full max-w-[300px]">
+        <div className="flex flex-col items-center justify-center h-full w-full">
+            <h3 className="text-xl font-bold font-serif text-slate-800 mb-6 w-full text-left">时间投入占比</h3>
+            <div className="w-full h-[280px] flex justify-center items-center">
                 <Pie data={data} options={options} />
             </div>
         </div>
