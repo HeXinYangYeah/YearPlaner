@@ -68,6 +68,41 @@ const EXAMPLES: Record<Domain, { vague: string, specific: string[] }[]> = {
     ]
 };
 
+const TUTORIAL_EXAMPLES: Record<Domain, { vague: string, specific: string[] }> = {
+    '学习成长': {
+        vague: '和朋友聊电影时能说出点门道',
+        specific: ['看完20部豆瓣TOP250电影', '每部写三句话短评', '了解3位导演的代表作风格', '每月和朋友约一次观影聊电影', '关注两个靠谱的影评公众号']
+    },
+    '体验突破': {
+        vague: '一个人去陌生城市过个周末',
+        specific: ['选一个没去过的周边城市', '订一家青旅或民宿', '不做攻略，随便逛吃两天', '拍一组街拍照片', '写篇随记发朋友圈']
+    },
+    '休闲娱乐': {
+        vague: '周末能睡到自然醒',
+        specific: ['周五前把所有工作收尾', '周六手机开勿扰模式', '买一套舒服的床品', '试两次睡醒直接吃早午餐', '周日晚上不焦虑周一']
+    },
+    '工作事业': {
+        vague: '下班后不用想工作的事',
+        specific: ['每天列待办清单，下班前清掉', '工作消息只在工作时间回', '每周最多加两天班', '和领导对齐一次职责边界', '培养一个下班后的爱好']
+    },
+    '家庭生活': {
+        vague: '爸妈来我家觉得我过得挺好',
+        specific: ['学会做3道爸妈爱吃的菜', '把房间收拾利索，不堆杂物', '带爸妈逛一次公园吃顿饭', '给他们看看我平时的生活照', '让他们放心，别老念叨']
+    },
+    '身体健康': {
+        vague: '爬楼梯不喘气',
+        specific: ['每周快走或慢跑2-3次', '坚持早睡，不熬夜刷手机', '每坐1小时站起来伸个懒腰', '少喝奶茶，多喝白水', '年底能一口气爬6层楼']
+    },
+    '财务理财': {
+        vague: '月底不看余额也不慌',
+        specific: ['每月发薪先存500元不动', '坚持记账3个月，知道钱花哪了', '取消2个不用的自动扣费', '年底攒够1万元“底气钱”', '少点外卖，自己带饭']
+    },
+    '人际社群': {
+        vague: '有几个能随时叫出来吃饭的朋友',
+        specific: ['每月主动约一个朋友吃饭', '朋友约饭尽量不推', '记住三五个好友的生日', '微信聊天不只发表情', '年底组个局大家一起聚聚']
+    }
+};
+
 export default function GoalModal({ domain, isOpen, onClose }: GoalModalProps) {
     const { goals, addGoal, removeGoal, setActiveModal } = useStore();
     const [newTitle, setNewTitle] = useState('');
@@ -138,18 +173,24 @@ export default function GoalModal({ domain, isOpen, onClose }: GoalModalProps) {
 
                             <div className="bg-white rounded-[2rem] p-6 shadow-soft border border-slate-100">
                                 <div className="flex flex-col md:flex-row items-center gap-6">
-                                    <div className="flex-1 text-center md:text-right">
+                                    <div className="flex-1 text-center md:text-right w-full">
                                         <div className="inline-block px-4 py-2 bg-indigo-50 text-indigo-600 rounded-full text-sm font-bold mb-3">模糊愿景</div>
-                                        <h4 className="text-2xl font-serif font-bold text-slate-800">"财务自由"</h4>
+                                        <h4 className="text-xl md:text-2xl font-serif font-bold text-slate-800 px-2 leading-snug">"{TUTORIAL_EXAMPLES[domain]?.vague || '我的愿景'}"</h4>
                                     </div>
                                     <div className="text-indigo-300 hidden md:block">
                                         <ArrowRight size={32} />
                                     </div>
-                                    <div className="flex-1 space-y-3">
-                                        <div className="inline-block px-4 py-2 bg-emerald-50 text-emerald-600 rounded-full text-sm font-bold">孵化的年度目标</div>
-                                        <ul className="text-sm text-slate-600 space-y-2">
-                                            <li className="flex gap-2 items-start"><CheckCircle2 size={16} className="text-emerald-500 mt-0.5 shrink-0" /> 3月份把房子租出去（租金收入）</li>
-                                            <li className="flex gap-2 items-start"><CheckCircle2 size={16} className="text-emerald-500 mt-0.5 shrink-0" /> 11月前完成一本时间管理的书</li>
+                                    <div className="flex-1 space-y-3 w-full">
+                                        <div className="text-center md:text-left">
+                                            <div className="inline-block px-4 py-2 bg-emerald-50 text-emerald-600 rounded-full text-sm font-bold">孵化的年度目标</div>
+                                        </div>
+                                        <ul className="text-sm text-slate-600 space-y-2 mt-2 w-full max-w-[300px] mx-auto md:max-w-none md:mx-0">
+                                            {TUTORIAL_EXAMPLES[domain]?.specific?.map((item, idx) => (
+                                                <li key={idx} className="flex gap-2 items-start text-left">
+                                                    <CheckCircle2 size={16} className="text-emerald-500 mt-0.5 shrink-0" />
+                                                    <span>{item}</span>
+                                                </li>
+                                            ))}
                                         </ul>
                                     </div>
                                 </div>

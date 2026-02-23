@@ -82,7 +82,7 @@ const generateId = () => Math.random().toString(36).substring(2, 9);
 export const useStore = create<PlannerState>()(
     persist(
         (set) => ({
-            theme: '我的年度主题',
+            theme: '填写年度主题',
             setTheme: (theme) => set({ theme }),
 
             goals: [],

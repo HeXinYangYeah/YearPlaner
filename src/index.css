@@ -45,6 +45,10 @@
     @apply bg-gradient-to-br from-[#1e1b4b] via-[#4c1d95] to-[#7c3aed];
   }
 
+  .gradient-warm {
+    @apply bg-gradient-to-br from-[#f97316] via-[#ea580c] to-[#c2410c];
+  }
+
   .gradient-accent {
     @apply bg-gradient-to-r from-[#8b5cf6] to-[#ec4899];
   }
