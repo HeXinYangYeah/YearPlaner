@@ -64,6 +64,11 @@ interface PlannerState {
 
     timeBudget: TimeBudget;
     updateTimeBudget: (budget: Partial<TimeBudget>) => void;
+
+    shareId: string | null;
+    setShareId: (id: string | null) => void;
+    syncToCloud: () => Promise<string>;
+    loadFromCloud: (id: string) => Promise<void>;
 }
 
 const generateId = () => Math.random().toString(36).substring(2, 9);
@@ -121,7 +126,46 @@ export const useStore = create<PlannerState>()(
             },
             updateTimeBudget: (budget) => set((state) => ({
                 timeBudget: { ...state.timeBudget, ...budget }
-            }))
+            })),
+
+            shareId: null,
+            setShareId: (id) => set({ shareId: id }),
+            syncToCloud: async () => {
+                const { theme, goals, tasks, timeBudget } = useStore.getState();
+                const { doc, setDoc, collection } = await import('firebase/firestore');
+                const { db } = await import('../firebase');
+
+                const id = Math.random().toString(36).substring(2, 15);
+                await setDoc(doc(collection(db, 'plans'), id), {
+                    theme,
+                    goals,
+                    tasks,
+                    timeBudget,
+                    createdAt: Date.now(),
+                    exportCount: 0,
+                    lastExported: null
+                });
+                set({ shareId: id });
+                return id;
+            },
+            loadFromCloud: async (id) => {
+                const { doc, getDoc } = await import('firebase/firestore');
+                const { db } = await import('../firebase');
+
+                const docSnap = await getDoc(doc(db, 'plans', id));
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    set({
+                        theme: data.theme,
+                        goals: data.goals,
+                        tasks: data.tasks,
+                        timeBudget: data.timeBudget,
+                        shareId: id
+                    });
+                } else {
+                    throw new Error('Plan not found');
+                }
+            }
         }),
         {
             name: 'goal-grid-planner-storage',

@@ -1,63 +1,17 @@
 import { useState } from 'react';
 import { useStore } from '../store/useStore';
-import { differenceInDays, parseISO } from 'date-fns';
 import EvaluationModal from './EvaluationModal';
+import { getBudgetStatus } from '../utils/plannerUtils';
 
 export default function StickyProgressBar() {
-    const { timeBudget, tasks } = useStore();
+    const { timeBudget, tasks, goals } = useStore();
     const [isEvaluationOpen, setIsEvaluationOpen] = useState(false);
 
-    const totalUsed = timeBudget.workHours + timeBudget.sleepHours + timeBudget.necessaryHours;
-    const availableWeekly = 168 - totalUsed;
-    const overallAnnualBudget = availableWeekly * 52;
-
-    // Calculate planned time
-    // Formula: for each task not hidden:
-    // Weeks = difference in days / 7
-    // cost = (dailyMinutes * 7 / 60 OR weeklyHours) * Weeks
-    let plannedAnnualHours = 0;
-
-    // Helper to calculate cost
-    const calculateCost = (item: { startDate?: string, endDate?: string, weeklyHours?: number, dailyMinutes?: number, weeklyFrequency?: number }) => {
-        try {
-            if (!item.startDate || !item.endDate) return 0;
-            const start = parseISO(item.startDate);
-            const end = parseISO(item.endDate);
-            const days = differenceInDays(end, start) + 1; // inclusive
-            if (days <= 0) return 0;
-
-            const weeks = days / 7;
-            let weeklyCost = 0;
-
-            if (item.weeklyHours) {
-                weeklyCost = item.weeklyHours;
-            } else if (item.dailyMinutes) {
-                // Goals only have dailyMinutes (assume 7 days), Tasks have dailyMinutes * weeklyFrequency
-                const freq = item.weeklyFrequency || 7;
-                weeklyCost = (item.dailyMinutes * freq) / 60;
-            }
-
-            return weeklyCost * weeks;
-        } catch (e) {
-            return 0;
-        }
-    };
-
-    tasks.filter(t => !t.hidden).forEach(task => {
-        plannedAnnualHours += calculateCost(task);
-    });
-
-    const { goals } = useStore.getState();
-    goals.forEach(goal => {
-        const goalTasks = tasks.filter(t => t.goalId === goal.id);
-        if (goalTasks.length === 0) {
-            plannedAnnualHours += calculateCost(goal);
-        }
-    });
+    const { plannedAnnualHours, overallAnnualBudget, isOverBudget } = getBudgetStatus(timeBudget, tasks, goals);
 
     const rawPercent = overallAnnualBudget > 0 ? (plannedAnnualHours / overallAnnualBudget) * 100 : 0;
     const percent = Math.min(rawPercent, 100);
-    const overBudget = rawPercent > 100;
+    const overBudget = isOverBudget;
 
     let barColor = 'bg-emerald-500';
     if (rawPercent > 80 && rawPercent <= 100) barColor = 'bg-amber-500';

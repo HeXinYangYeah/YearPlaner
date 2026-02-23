@@ -1,7 +1,7 @@
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import { Pie } from 'react-chartjs-2';
 import { useStore } from '../store/useStore';
-import { differenceInDays, parseISO } from 'date-fns';
+import { calculateCost } from '../utils/plannerUtils';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
@@ -21,30 +21,6 @@ export default function PieChartSummary() {
     const visibleTasks = tasks.filter(t => !t.hidden);
 
     const domainHours: Record<string, number> = {};
-
-    const calculateCost = (item: { startDate?: string, endDate?: string, weeklyHours?: number, dailyMinutes?: number, weeklyFrequency?: number }) => {
-        try {
-            if (!item.startDate || !item.endDate) return 0;
-            const start = parseISO(item.startDate);
-            const end = parseISO(item.endDate);
-            const days = differenceInDays(end, start) + 1; // inclusive
-            if (days <= 0) return 0;
-
-            const weeks = days / 7;
-            let weeklyCost = 0;
-
-            if (item.weeklyHours) {
-                weeklyCost = item.weeklyHours;
-            } else if (item.dailyMinutes) {
-                const freq = item.weeklyFrequency || 7;
-                weeklyCost = (item.dailyMinutes * freq) / 60;
-            }
-
-            return weeklyCost * weeks;
-        } catch (e) {
-            return 0;
-        }
-    };
 
     visibleTasks.forEach(task => {
         const goal = goals.find(g => g.id === task.goalId);
