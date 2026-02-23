@@ -4,22 +4,23 @@ import type { Domain } from '../store/useStore';
 import { Target, TrendingUp, Heart, Users, BookOpen, Coffee, Star, Briefcase } from 'lucide-react';
 
 const DOMAIN_ICONS: Record<string, { icon: React.ElementType, color: string, bg: string }> = {
-    '职业发展': { icon: Briefcase, color: 'text-[#3b82f6]', bg: 'bg-[#eff6ff]' },
-    '财务': { icon: TrendingUp, color: 'text-[#10b981]', bg: 'bg-[#ecfdf5]' },
-    '健康': { icon: Heart, color: 'text-[#f43f5e]', bg: 'bg-[#fff1f2]' },
-    '家庭': { icon: Users, color: 'text-[#f59e0b]', bg: 'bg-[#fffbeb]' },
-    '社交': { icon: Target, color: 'text-[#8b5cf6]', bg: 'bg-[#f5f3ff]' },
-    '学习': { icon: BookOpen, color: 'text-[#0ea5e9]', bg: 'bg-[#f0f9ff]' },
-    '休闲': { icon: Coffee, color: 'text-[#d946ef]', bg: 'bg-[#fdf4ff]' },
-    '个人成长': { icon: Star, color: 'text-[#eab308]', bg: 'bg-[#fefce8]' }
+    '学习成长': { icon: BookOpen, color: 'text-[#0ea5e9]', bg: 'bg-[#f0f9ff]' },
+    '体验突破': { icon: Star, color: 'text-[#eab308]', bg: 'bg-[#fefce8]' },
+    '休闲娱乐': { icon: Coffee, color: 'text-[#d946ef]', bg: 'bg-[#fdf4ff]' },
+    '工作事业': { icon: Briefcase, color: 'text-[#3b82f6]', bg: 'bg-[#eff6ff]' },
+    '家庭生活': { icon: Users, color: 'text-[#f59e0b]', bg: 'bg-[#fffbeb]' },
+    '身体健康': { icon: Heart, color: 'text-[#f43f5e]', bg: 'bg-[#fff1f2]' },
+    '财务理财': { icon: TrendingUp, color: 'text-[#10b981]', bg: 'bg-[#ecfdf5]' },
+    '人际社群': { icon: Target, color: 'text-[#8b5cf6]', bg: 'bg-[#f5f3ff]' }
 };
 
 interface GoalGridCellProps {
     domain: Domain;
+    showWarning?: boolean;
     onClick: () => void;
 }
 
-export default function GoalGridCell({ domain, onClick }: GoalGridCellProps) {
+export default function GoalGridCell({ domain, showWarning, onClick }: GoalGridCellProps) {
     const { goals } = useStore();
     const domainGoals = goals.filter(g => g.domain === domain);
     const conf = DOMAIN_ICONS[domain] || { icon: Target, color: 'text-slate-500', bg: 'bg-slate-100' };
@@ -31,8 +32,11 @@ export default function GoalGridCell({ domain, onClick }: GoalGridCellProps) {
     return (
         <div
             onClick={onClick}
-            className="glass-panel rounded-[2rem] p-5 md:p-6 flex flex-col items-center justify-between cursor-pointer hover:-translate-y-1 transition-all duration-300 group min-h-[140px] md:min-h-[160px] relative overflow-hidden"
+            className={`glass-panel rounded-[2rem] p-5 md:p-6 flex flex-col items-center justify-between cursor-pointer hover:-translate-y-1 transition-all duration-300 group min-h-[140px] md:min-h-[160px] relative overflow-hidden border-2 ${showWarning ? 'border-red-400 bg-red-50/30 anim-pulse' : 'border-transparent'}`}
         >
+            {showWarning && (
+                <div className="absolute top-4 right-4 w-2 h-2 bg-red-500 rounded-full animate-ping"></div>
+            )}
             <div className="flex flex-col items-center gap-3 w-full">
                 <div className={`p-4 rounded-3xl ${conf.bg} ${conf.color} transition-transform duration-300 group-hover:scale-110 shadow-sm`}>
                     <Icon size={28} strokeWidth={2} />

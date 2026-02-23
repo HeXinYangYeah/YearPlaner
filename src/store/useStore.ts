@@ -69,6 +69,12 @@ interface PlannerState {
     setShareId: (id: string | null) => void;
     syncToCloud: () => Promise<string>;
     loadFromCloud: (id: string) => Promise<void>;
+
+    showTutorial: boolean;
+    setShowTutorial: (show: boolean) => void;
+
+    activeModal: string | null;
+    setActiveModal: (modalId: string | null) => void;
 }
 
 const generateId = () => Math.random().toString(36).substring(2, 9);
@@ -165,7 +171,13 @@ export const useStore = create<PlannerState>()(
                 } else {
                     throw new Error('Plan not found');
                 }
-            }
+            },
+
+            showTutorial: false,
+            setShowTutorial: (show) => set({ showTutorial: show }),
+
+            activeModal: null,
+            setActiveModal: (id) => set({ activeModal: id }),
         }),
         {
             name: 'goal-grid-planner-storage',

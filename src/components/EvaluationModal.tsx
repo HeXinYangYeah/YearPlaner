@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import type { Task } from '../store/useStore';
 import { X, AlertTriangle, EyeOff, CheckCircle } from 'lucide-react';
@@ -9,7 +10,22 @@ interface EvaluationModalProps {
 }
 
 export default function EvaluationModal({ isOpen, onClose }: EvaluationModalProps) {
-    const { tasks, timeBudget, hideTask } = useStore();
+    const { tasks, timeBudget, hideTask, setActiveModal } = useStore();
+
+    // Lock body scroll when modal is open
+    useEffect(() => {
+        if (isOpen) {
+            setActiveModal('evaluation');
+            document.body.style.overflow = 'hidden';
+        } else {
+            setActiveModal(null);
+            document.body.style.overflow = 'unset';
+        }
+        return () => {
+            setActiveModal(null);
+            document.body.style.overflow = 'unset';
+        };
+    }, [isOpen, setActiveModal]);
 
     if (!isOpen) return null;
 
@@ -68,7 +84,7 @@ export default function EvaluationModal({ isOpen, onClose }: EvaluationModalProp
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
             <div className="bg-white rounded-3xl w-full max-w-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
                 <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                     <div className="flex items-center gap-2 text-slate-800">

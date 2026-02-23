@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import type { Goal, Task, TaskType } from '../store/useStore';
 import { X, Calendar } from 'lucide-react';
@@ -12,8 +12,34 @@ interface TaskModalProps {
 }
 
 export default function TaskModal({ goal, task, requireEvaluation = false, onClose }: TaskModalProps) {
-    const { addTask, updateTask } = useStore();
+    const { addTask, updateTask, setActiveModal } = useStore();
     const isEditing = !!task;
+
+    // Lock body scroll when modal is open
+    useEffect(() => {
+        setActiveModal(isEditing ? `task-edit-${task?.id}` : `task-add-${goal?.id}`);
+
+        // Robust scroll lock for mobile
+        const originalStyle = window.getComputedStyle(document.body).overflow;
+        const scrollBarWidth = window.innerWidth - document.documentElement.clientWidth;
+
+        document.body.style.overflow = 'hidden';
+        document.body.style.paddingRight = `${scrollBarWidth}px`;
+
+        // Prevent touch move on body for iOS
+        const preventDefault = (e: TouchEvent) => {
+            if ((e.target as HTMLElement).closest('.modal-content-scrollable')) return;
+            e.preventDefault();
+        };
+        document.addEventListener('touchmove', preventDefault, { passive: false });
+
+        return () => {
+            setActiveModal(null);
+            document.body.style.overflow = originalStyle;
+            document.body.style.paddingRight = '0px';
+            document.removeEventListener('touchmove', preventDefault);
+        };
+    }, [isEditing, task, goal, setActiveModal]);
 
     const [title, setTitle] = useState(task?.title || '');
     const [type, setType] = useState<TaskType>(task?.type || 'project');
@@ -66,7 +92,7 @@ export default function TaskModal({ goal, task, requireEvaluation = false, onClo
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
             <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
                 <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                     <h2 className="text-xl font-bold text-slate-800">
@@ -77,7 +103,7 @@ export default function TaskModal({ goal, task, requireEvaluation = false, onClo
                     </button>
                 </div>
 
-                <div className="p-6 overflow-y-auto space-y-6">
+                <div className="p-6 overflow-y-auto space-y-6 modal-content-scrollable">
                     {/* Name & Type */}
                     <div className="space-y-4">
                         <div>

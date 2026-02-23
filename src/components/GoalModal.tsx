@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import type { Domain } from '../store/useStore';
 import { X, Plus, Trash2, ArrowRight, Lightbulb, CheckCircle2 } from 'lucide-react';
@@ -69,12 +69,39 @@ const EXAMPLES: Record<Domain, { vague: string, specific: string[] }[]> = {
 };
 
 export default function GoalModal({ domain, isOpen, onClose }: GoalModalProps) {
-    const { goals, addGoal, removeGoal } = useStore();
+    const { goals, addGoal, removeGoal, setActiveModal } = useStore();
     const [newTitle, setNewTitle] = useState('');
 
     // Tutorial state - show if no goals in this domain yet
     const domainGoals = goals.filter(g => g.domain === domain);
     const [showTutorial, setShowTutorial] = useState(domainGoals.length === 0);
+
+    // Sync with global modal state and lock body scroll
+    useEffect(() => {
+        if (isOpen) {
+            setActiveModal(`goal-${domain}`);
+            // Robust scroll lock for mobile
+            const originalStyle = window.getComputedStyle(document.body).overflow;
+            const scrollBarWidth = window.innerWidth - document.documentElement.clientWidth;
+
+            document.body.style.overflow = 'hidden';
+            document.body.style.paddingRight = `${scrollBarWidth}px`;
+
+            // Prevent touch move on body for iOS
+            const preventDefault = (e: TouchEvent) => {
+                if ((e.target as HTMLElement).closest('.modal-content-scrollable')) return;
+                e.preventDefault();
+            };
+            document.addEventListener('touchmove', preventDefault, { passive: false });
+
+            return () => {
+                setActiveModal(null);
+                document.body.style.overflow = originalStyle;
+                document.body.style.paddingRight = '0px';
+                document.removeEventListener('touchmove', preventDefault);
+            };
+        }
+    }, [isOpen, domain, setActiveModal]);
 
     if (!isOpen) return null;
 
@@ -87,7 +114,7 @@ export default function GoalModal({ domain, isOpen, onClose }: GoalModalProps) {
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex flex-col justify-end md:items-center md:justify-center p-0 md:p-4 bg-slate-900/60 backdrop-blur-md transition-all">
+        <div className="fixed inset-0 z-[200] flex flex-col justify-end md:items-center md:justify-center p-0 md:p-4 bg-slate-900/60 backdrop-blur-md transition-all">
             <div className="bg-[#f8f9fa] rounded-t-3xl md:rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh] md:max-h-[90vh] animate-in slide-in-from-bottom-5 md:zoom-in-95 duration-300">
                 {/* Header */}
                 <div className="px-6 py-5 border-b border-slate-200 flex justify-between items-center bg-white">
@@ -98,7 +125,7 @@ export default function GoalModal({ domain, isOpen, onClose }: GoalModalProps) {
                 </div>
 
                 {/* Content */}
-                <div className="p-0 overflow-y-auto flex-1 font-sans">
+                <div className="p-0 overflow-y-auto flex-1 font-sans modal-content-scrollable">
                     {showTutorial ? (
                         <div className="p-6 md:p-8 space-y-8 animate-in fade-in duration-500">
                             <div className="text-center space-y-2">
@@ -124,13 +151,14 @@ export default function GoalModal({ domain, isOpen, onClose }: GoalModalProps) {
                                     </div>
                                 </div>
                             </div>
-
-                            <button
-                                onClick={() => setShowTutorial(false)}
-                                className="w-full py-4 gradient-primary text-white rounded-2xl font-bold text-lg shadow-soft-hover hover:scale-[1.02] transition-transform"
-                            >
-                                我懂了，开始设置 {domain} 目标
-                            </button>
+                            <div className="sticky bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-[#f8f9fa] via-[#f8f9fa] to-transparent pt-10">
+                                <button
+                                    onClick={() => setShowTutorial(false)}
+                                    className="w-full py-4 gradient-primary text-white rounded-2xl font-bold text-lg shadow-soft-hover hover:scale-[1.02] transition-transform"
+                                >
+                                    我懂了，开始设置 {domain} 目标
+                                </button>
+                            </div>
                         </div>
                     ) : (
                         <div className="p-6 md:p-8 bg-[#f8f9fa]">

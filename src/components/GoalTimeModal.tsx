@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import type { Goal } from '../store/useStore';
 import { format } from 'date-fns';
@@ -10,7 +10,17 @@ interface GoalTimeModalProps {
 }
 
 export default function GoalTimeModal({ goal, onClose }: GoalTimeModalProps) {
-    const { updateGoal } = useStore();
+    const { updateGoal, setActiveModal } = useStore();
+
+    // Lock body scroll when modal is open
+    useEffect(() => {
+        setActiveModal(`goal-time-${goal.id}`);
+        document.body.style.overflow = 'hidden';
+        return () => {
+            setActiveModal(null);
+            document.body.style.overflow = 'unset';
+        };
+    }, [goal.id, setActiveModal]);
 
     const [timeMode, setTimeMode] = useState<'daily' | 'weekly'>(goal.weeklyHours ? 'weekly' : 'daily');
     const [dailyMinutes, setDailyMinutes] = useState(goal.dailyMinutes?.toString() || '60');
@@ -39,7 +49,7 @@ export default function GoalTimeModal({ goal, onClose }: GoalTimeModalProps) {
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
             <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden flex flex-col">
                 <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                     <h2 className="text-lg font-bold text-slate-800">直接估算时间</h2>

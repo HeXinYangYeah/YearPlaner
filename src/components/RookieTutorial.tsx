@@ -1,23 +1,25 @@
 import { useState, useEffect } from 'react';
 import { X, ArrowRight, Target, Calendar, BarChart3, Clock, Sparkles } from 'lucide-react';
+import { useStore } from '../store/useStore';
 
 export default function RookieTutorial() {
+    const { showTutorial, setShowTutorial } = useStore();
     const [step, setStep] = useState(0);
-    const [isVisible, setIsVisible] = useState(false);
 
     useEffect(() => {
         const hasSeen = localStorage.getItem('hasSeenRookieTutorial');
         if (!hasSeen) {
-            setIsVisible(true);
+            setShowTutorial(true);
         }
-    }, []);
+    }, [setShowTutorial]);
 
     const handleFinish = () => {
         localStorage.setItem('hasSeenRookieTutorial', 'true');
-        setIsVisible(false);
+        setShowTutorial(false);
+        setStep(0); // Reset for next time manual trigger
     };
 
-    if (!isVisible) return null;
+    if (!showTutorial) return null;
 
     const steps = [
         {
@@ -68,7 +70,7 @@ export default function RookieTutorial() {
                 </button>
 
                 <div className="p-8 md:p-10 flex flex-col items-center text-center">
-                    <div className={`w-20 h-20 ${current.bg} ${current.color} rounded-3xl flex items-center justify-center mb-8 shadow-sm transition-all duration-500 transform ${isVisible ? 'scale-100' : 'scale-0'}`}>
+                    <div className={`w-20 h-20 ${current.bg} ${current.color} rounded-3xl flex items-center justify-center mb-8 shadow-sm transition-all duration-500 transform ${showTutorial ? 'scale-100' : 'scale-0'}`}>
                         <Icon size={40} />
                     </div>
 
