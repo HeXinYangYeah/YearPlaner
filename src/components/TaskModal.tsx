@@ -17,29 +17,31 @@ export default function TaskModal({ goal, task, requireEvaluation = false, onClo
 
     // Lock body scroll when modal is open
     useEffect(() => {
-        setActiveModal(isEditing ? `task-edit-${task?.id}` : `task-add-${goal?.id}`);
+        setActiveModal('task');
 
-        // Robust scroll lock for mobile
-        const originalStyle = window.getComputedStyle(document.body).overflow;
-        const scrollBarWidth = window.innerWidth - document.documentElement.clientWidth;
+        // "Nuclear" scroll lock for mobile to prevent all wobble
+        const scrollY = window.scrollY;
+        const originalStyle = document.body.style.overflow;
+        const originalPosition = document.body.style.position;
+        const originalTop = document.body.style.top;
+        const originalWidth = document.body.style.width;
 
         document.body.style.overflow = 'hidden';
-        document.body.style.paddingRight = `${scrollBarWidth}px`;
-
-        // Prevent touch move on body for iOS
-        const preventDefault = (e: TouchEvent) => {
-            if ((e.target as HTMLElement).closest('.modal-content-scrollable')) return;
-            e.preventDefault();
-        };
-        document.addEventListener('touchmove', preventDefault, { passive: false });
+        document.body.style.position = 'fixed';
+        document.body.style.top = `-${scrollY}px`;
+        document.body.style.width = '100%';
+        document.body.style.overflowX = 'hidden';
 
         return () => {
             setActiveModal(null);
             document.body.style.overflow = originalStyle;
-            document.body.style.paddingRight = '0px';
-            document.removeEventListener('touchmove', preventDefault);
+            document.body.style.position = originalPosition;
+            document.body.style.top = originalTop;
+            document.body.style.width = originalWidth;
+            document.body.style.overflowX = '';
+            window.scrollTo(0, scrollY);
         };
-    }, [isEditing, task, goal, setActiveModal]);
+    }, [setActiveModal]);
 
     const [title, setTitle] = useState(task?.title || '');
     const [type, setType] = useState<TaskType>(task?.type || 'project');
@@ -92,7 +94,7 @@ export default function TaskModal({ goal, task, requireEvaluation = false, onClo
     };
 
     return (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[200] flex flex-col justify-end md:items-center md:justify-center p-0 md:p-4 bg-slate-900/60 backdrop-blur-md transition-all overflow-x-hidden">
             <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
                 <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                     <h2 className="text-xl font-bold text-slate-800">

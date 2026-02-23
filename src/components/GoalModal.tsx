@@ -80,25 +80,28 @@ export default function GoalModal({ domain, isOpen, onClose }: GoalModalProps) {
     useEffect(() => {
         if (isOpen) {
             setActiveModal(`goal-${domain}`);
-            // Robust scroll lock for mobile
-            const originalStyle = window.getComputedStyle(document.body).overflow;
-            const scrollBarWidth = window.innerWidth - document.documentElement.clientWidth;
+
+            // "Nuclear" scroll lock for mobile to prevent all wobble
+            const scrollY = window.scrollY;
+            const originalStyle = document.body.style.overflow;
+            const originalPosition = document.body.style.position;
+            const originalTop = document.body.style.top;
+            const originalWidth = document.body.style.width;
 
             document.body.style.overflow = 'hidden';
-            document.body.style.paddingRight = `${scrollBarWidth}px`;
-
-            // Prevent touch move on body for iOS
-            const preventDefault = (e: TouchEvent) => {
-                if ((e.target as HTMLElement).closest('.modal-content-scrollable')) return;
-                e.preventDefault();
-            };
-            document.addEventListener('touchmove', preventDefault, { passive: false });
+            document.body.style.position = 'fixed';
+            document.body.style.top = `-${scrollY}px`;
+            document.body.style.width = '100%';
+            document.body.style.overflowX = 'hidden';
 
             return () => {
                 setActiveModal(null);
                 document.body.style.overflow = originalStyle;
-                document.body.style.paddingRight = '0px';
-                document.removeEventListener('touchmove', preventDefault);
+                document.body.style.position = originalPosition;
+                document.body.style.top = originalTop;
+                document.body.style.width = originalWidth;
+                document.body.style.overflowX = '';
+                window.scrollTo(0, scrollY);
             };
         }
     }, [isOpen, domain, setActiveModal]);
@@ -114,7 +117,7 @@ export default function GoalModal({ domain, isOpen, onClose }: GoalModalProps) {
     };
 
     return (
-        <div className="fixed inset-0 z-[200] flex flex-col justify-end md:items-center md:justify-center p-0 md:p-4 bg-slate-900/60 backdrop-blur-md transition-all">
+        <div className="fixed inset-0 z-[200] flex flex-col justify-end md:items-center md:justify-center p-0 md:p-4 bg-slate-900/60 backdrop-blur-md transition-all overflow-x-hidden">
             <div className="bg-[#f8f9fa] rounded-t-3xl md:rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh] md:max-h-[90vh] animate-in slide-in-from-bottom-5 md:zoom-in-95 duration-300">
                 {/* Header */}
                 <div className="px-6 py-5 border-b border-slate-200 flex justify-between items-center bg-white">
@@ -166,26 +169,20 @@ export default function GoalModal({ domain, isOpen, onClose }: GoalModalProps) {
                             <div className="mb-8">
                                 <div className="flex items-center gap-2 mb-4">
                                     <Lightbulb size={20} className="text-amber-500" />
-                                    <h4 className="font-bold text-slate-700">愿景参考：左右滑动查看，可以直接添加到灵感</h4>
+                                    <h4 className="font-bold text-slate-700">愿景参考：点击直接添加</h4>
                                 </div>
-                                <div className="flex gap-4 overflow-x-auto pb-6 snap-x snap-mandatory hide-scrollbars -mx-6 px-6 md:mx-0 md:px-0 scroll-smooth">
+                                <div className="flex gap-3 mb-6 overflow-x-auto pb-4 snap-x hide-scrollbars -mx-6 px-6">
                                     {EXAMPLES[domain]?.map((ex, idx) => (
-                                        <div key={idx} className="snap-center shrink-0 w-[240px] md:w-[260px] bg-white rounded-3xl p-6 shadow-soft border border-emerald-50 flex flex-col items-center text-center justify-between group hover:border-indigo-200 transition-colors">
-                                            <div className="mb-4">
-                                                <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-500 mb-4 mx-auto group-hover:scale-110 transition-transform">
-                                                    <Lightbulb size={24} />
-                                                </div>
-                                                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">愿景灵感</div>
-                                                <h5 className="font-bold font-serif text-lg text-slate-800 leading-snug px-2">{ex.vague}</h5>
-                                            </div>
-                                            <button
-                                                onClick={() => handleAdd(ex.vague)}
-                                                disabled={domainGoals.length >= 3}
-                                                className="w-full py-3 bg-slate-50 hover:bg-indigo-600 text-slate-600 hover:text-white font-bold rounded-2xl text-sm transition-all disabled:opacity-50"
-                                            >
-                                                直接选用
-                                            </button>
-                                        </div>
+                                        <button
+                                            key={idx}
+                                            onClick={() => handleAdd(ex.vague)}
+                                            disabled={domainGoals.length >= 3}
+                                            className="relative bg-white/30 backdrop-blur-lg rounded-2xl p-4 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] border border-white/50 flex flex-col items-center text-center justify-center group hover:border-white transition-all disabled:opacity-50 text-left active:scale-95 flex-shrink-0 w-[140px] md:w-[160px] snap-align-start overflow-hidden"
+                                        >
+                                            <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-white/10 pointer-events-none" />
+                                            <h5 className="font-bold font-serif text-sm text-slate-800 leading-tight mb-2 relative z-10">{ex.vague}</h5>
+                                            <span className="text-[10px] text-indigo-500 font-bold uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity relative z-10">点击添加</span>
+                                        </button>
                                     ))}
                                 </div>
                             </div>
@@ -198,42 +195,38 @@ export default function GoalModal({ domain, isOpen, onClose }: GoalModalProps) {
 
                                 <div className="space-y-3 mb-6">
                                     {domainGoals.map((g, i) => (
-                                        <div key={g.id} className="flex items-center justify-between p-4 bg-slate-50 border border-slate-200 rounded-2xl group">
-                                            <span className="font-bold text-slate-700">
+                                        <div key={g.id} className="relative flex items-center justify-between p-4 bg-white/30 backdrop-blur-lg border border-white/50 rounded-2xl group animate-in zoom-in-95 duration-200 shadow-[0_4px_16px_0_rgba(31,38,135,0.05)] overflow-hidden">
+                                            <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-white/10 pointer-events-none" />
+                                            <span className="font-bold text-slate-700 relative z-10">
                                                 <span className="text-indigo-400 mr-2 text-sm">{i + 1}.</span>
                                                 {g.title}
                                             </span>
                                             <button
                                                 onClick={() => removeGoal(g.id)}
-                                                className="text-red-300 hover:text-red-500 p-2 hover:bg-red-50 rounded-xl transition opacity-100 md:opacity-0 group-hover:opacity-100"
+                                                className="relative z-10 text-red-300 hover:text-red-500 p-2 hover:bg-red-50/50 rounded-xl transition opacity-100 md:opacity-0 group-hover:opacity-100"
                                             >
                                                 <Trash2 size={18} />
                                             </button>
                                         </div>
                                     ))}
-                                    {domainGoals.length === 0 && (
-                                        <div className="text-center py-6 text-slate-400 text-sm border-2 border-dashed border-slate-200 rounded-2xl">
-                                            你还没有写下你的愿景哦~
-                                        </div>
-                                    )}
                                 </div>
 
                                 {domainGoals.length < 3 && (
-                                    <div className="flex gap-2 relative">
+                                    <div className="relative flex items-center shadow-sm group">
                                         <input
                                             type="text"
                                             value={newTitle}
                                             onChange={(e) => setNewTitle(e.target.value)}
                                             onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
-                                            placeholder="输入你自己的的模糊愿景..."
-                                            className="flex-1 px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:bg-white outline-none transition font-medium text-slate-700"
+                                            placeholder="输入你自己的模糊愿景..."
+                                            className="w-full pl-5 pr-14 py-4 bg-white/50 backdrop-blur-md border border-white/60 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white/80 transition-all font-medium text-slate-700 placeholder:text-slate-400"
                                         />
                                         <button
                                             onClick={() => handleAdd()}
                                             disabled={!newTitle.trim()}
-                                            className="px-5 py-4 gradient-primary text-white rounded-2xl hover:brightness-110 disabled:opacity-50 disabled:grayscale transition flex items-center justify-center min-w-[60px]"
+                                            className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 gradient-primary text-white rounded-xl hover:brightness-110 disabled:opacity-0 disabled:scale-75 transition-all duration-300 flex items-center justify-center shadow-lg shadow-indigo-200"
                                         >
-                                            <Plus size={24} />
+                                            <Plus size={20} />
                                         </button>
                                     </div>
                                 )}
