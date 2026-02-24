@@ -1,4 +1,5 @@
-import type { Domain, Goal } from '../store/useStore';
+import { useStore, type Domain, type Goal } from '../store/useStore';
+import { calculateCost } from '../utils/plannerUtils';
 
 interface BentoGridProps {
     allocations: Record<Domain, number>;
@@ -85,13 +86,25 @@ function binaryTreemap(data: BlockData[], x: number, y: number, w: number, h: nu
     }
 }
 
-function getKeywords(goals: Goal[], domain: Domain): string[] {
+// Sort goals by total time spent to prioritize important goals
+function getSortedKeywords(goals: Goal[], domain: Domain, tasks: any[]): string[] {
     const domainGoals = goals.filter(g => g.domain === domain);
     if (domainGoals.length === 0) return [];
-    return domainGoals.map(g => g.title.trim());
+
+    return domainGoals
+        .map(g => {
+            const goalTasks = tasks.filter(t => t.goalId === g.id && !t.hidden);
+            const time = goalTasks.length > 0
+                ? goalTasks.reduce((sum, t) => sum + calculateCost(t), 0)
+                : calculateCost(g);
+            return { title: g.title.trim(), time };
+        })
+        .sort((a, b) => b.time - a.time)
+        .map(g => g.title);
 }
 
 export default function BentoGrid({ allocations, goals, isDark = false }: BentoGridProps) {
+    const tasks = useStore(state => state.tasks);
     const STYLES = isDark ? DOMAIN_STYLE : DOMAIN_STYLE_LIGHT;
 
     const totalAllo = [...DOMAIN_ORDER].reduce((acc, d) => acc + (allocations[d] || 0), 0);
@@ -111,7 +124,12 @@ export default function BentoGrid({ allocations, goals, isDark = false }: BentoG
                 const style = STYLES[domain] || STYLES['工作事业'];
                 const area = block.w * block.h;
                 const maxKw = area > 2000 ? 5 : area > 1000 ? 3 : 2;
-                const keywords = getKeywords(goals, domain).slice(0, maxKw);
+                const keywords = getSortedKeywords(goals, domain, tasks).slice(0, maxKw);
+
+                // Dynamically calculate font size based on block dimensions to fill space without overflowing logic
+                const kwCount = Math.max(1, keywords.length);
+                const titleSize = Math.max(10, Math.min(28, block.h * 0.6));
+                const kwSize = Math.max(9, Math.min(24, (block.h * 0.9) / kwCount));
 
                 return (
                     <div
@@ -143,13 +161,15 @@ export default function BentoGrid({ allocations, goals, isDark = false }: BentoG
                             {/* Domain label */}
                             <div
                                 style={{
-                                    fontSize: 'clamp(10px, 12cqmin, 16px)',
+                                    fontSize: `${titleSize}px`,
                                     fontWeight: 900,
                                     color: style.textColor,
                                     letterSpacing: '-0.3px',
-                                    whiteSpace: 'nowrap',
+                                    wordBreak: 'keep-all', // allows word to wrap like 休闲\n娱乐 instead of truncation
                                     overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
+                                    display: '-webkit-box',
+                                    WebkitLineClamp: 2,
+                                    WebkitBoxOrient: 'vertical',
                                     flexShrink: 0,
                                 }}
                             >
@@ -181,19 +201,15 @@ export default function BentoGrid({ allocations, goals, isDark = false }: BentoG
                                     <span
                                         key={i}
                                         style={{
-                                            fontSize: 'clamp(9px, 9cqmin, 13px)',
+                                            fontSize: `${kwSize}px`,
                                             fontWeight: 800,
                                             color: style.textColor,
                                             background: style.tagBg,
-                                            padding: '3px 8px',
+                                            padding: `${Math.max(3, kwSize * 0.2)}px ${Math.max(6, kwSize * 0.4)}px`,
                                             borderRadius: '6px',
                                             lineHeight: 1.35,
-                                            display: '-webkit-box',
-                                            WebkitLineClamp: 2,
-                                            WebkitBoxOrient: 'vertical',
-                                            overflow: 'hidden',
-                                            textOverflow: 'ellipsis',
-                                            wordBreak: 'break-all',
+                                            wordBreak: 'break-word',
+                                            // No WebkitLineClamp restriction, let natural wrapping occur
                                         }}
                                     >
                                         {kw}
