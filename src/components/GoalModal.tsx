@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import type { Domain } from '../store/useStore';
-import { X, Plus, Trash2, ArrowRight, Lightbulb, CheckCircle2 } from 'lucide-react';
+import { X, Plus, Trash2, ArrowRight, Lightbulb, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface GoalModalProps {
     domain: Domain;
@@ -134,6 +134,7 @@ export default function GoalModal({ domain, isOpen, onClose }: GoalModalProps) {
     // Tutorial state - show if no goals in this domain yet
     const domainGoals = goals.filter(g => g.domain === domain);
     const [showTutorial, setShowTutorial] = useState(domainGoals.length === 0);
+    const [showVisionReference, setShowVisionReference] = useState(false);
 
     // Sync with global modal state and lock body scroll
     useEffect(() => {
@@ -230,29 +231,7 @@ export default function GoalModal({ domain, isOpen, onClose }: GoalModalProps) {
                         </div>
                     ) : (
                         <div className="p-6 md:p-8 bg-[#f8f9fa]">
-                            {/* Slideable Cards (Carousel) for EXAMPLES */}
-                            <div className="mb-8">
-                                <div className="flex items-center gap-2 mb-4">
-                                    <Lightbulb size={20} className="text-amber-500" />
-                                    <h4 className="font-bold text-slate-700">愿景参考：点击直接添加</h4>
-                                </div>
-                                <div className="flex gap-3 mb-6 overflow-x-auto pb-4 snap-x hide-scrollbars -mx-6 px-6">
-                                    {EXAMPLES[domain]?.map((ex, idx) => (
-                                        <button
-                                            key={idx}
-                                            onClick={() => handleAdd(ex.vague)}
-                                            disabled={domainGoals.length >= 3}
-                                            className="relative bg-white/30 backdrop-blur-lg rounded-2xl p-4 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] border border-white/50 flex flex-col items-center text-center justify-center group hover:border-white transition-all disabled:opacity-50 text-left active:scale-95 flex-shrink-0 w-[140px] md:w-[160px] snap-align-start overflow-hidden"
-                                        >
-                                            <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-white/10 pointer-events-none" />
-                                            <h5 className="font-bold font-serif text-sm text-slate-800 leading-tight mb-2 relative z-10">{ex.vague}</h5>
-                                            <span className="text-[10px] text-indigo-500 font-bold uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity relative z-10">点击添加</span>
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <div className="bg-white rounded-3xl p-6 shadow-soft border border-slate-100">
+                            <div className="bg-white rounded-3xl p-6 shadow-soft border border-slate-100 mb-8">
                                 <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
                                     我的 {domain} 愿景
                                     <span className="text-xs font-normal text-slate-400">已设置 ({domainGoals.length}/3)</span>
@@ -293,6 +272,37 @@ export default function GoalModal({ domain, isOpen, onClose }: GoalModalProps) {
                                         >
                                             <Plus size={20} />
                                         </button>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Slideable Cards (Carousel) for EXAMPLES */}
+                            <div className="mt-4">
+                                <button
+                                    onClick={() => setShowVisionReference(!showVisionReference)}
+                                    className="flex items-center gap-2 mb-4 hover:opacity-80 transition-opacity w-full text-left"
+                                >
+                                    <Lightbulb size={20} className="text-amber-500" />
+                                    <h4 className="font-bold text-slate-700">没有头绪？点击查看愿景参考</h4>
+                                    <div className="ml-auto text-slate-400">
+                                        {showVisionReference ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                                    </div>
+                                </button>
+
+                                {showVisionReference && (
+                                    <div className="flex gap-3 overflow-x-auto pb-4 snap-x hide-scrollbars -mx-6 px-6 animate-in slide-in-from-top-2 fade-in duration-300">
+                                        {EXAMPLES[domain]?.map((ex, idx) => (
+                                            <button
+                                                key={idx}
+                                                onClick={() => handleAdd(ex.vague)}
+                                                disabled={domainGoals.length >= 3}
+                                                className="relative bg-white/30 backdrop-blur-lg rounded-2xl p-4 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] border border-white/50 flex flex-col items-center text-center justify-center group hover:border-white transition-all disabled:opacity-50 text-left active:scale-95 flex-shrink-0 w-[140px] md:w-[160px] snap-align-start overflow-hidden"
+                                            >
+                                                <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-white/10 pointer-events-none" />
+                                                <h5 className="font-bold font-serif text-sm text-slate-800 leading-tight mb-2 relative z-10">{ex.vague}</h5>
+                                                <span className="text-[10px] text-indigo-500 font-bold uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity relative z-10">点击添加</span>
+                                            </button>
+                                        ))}
                                     </div>
                                 )}
                             </div>
