@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useStore } from '../store/useStore';
 import type { Goal, Task } from '../store/useStore';
 import {
@@ -7,6 +7,11 @@ import {
 } from 'lucide-react';
 import TaskModal from './TaskModal';
 import { eachWeekOfInterval, parseISO, startOfWeek, endOfWeek, format } from 'date-fns';
+
+// ── Helper: check if goal has time set or is decomposed ────────────────────────
+function hasTimeSet(goal: Goal, tasks: Task[]) {
+    return !!goal.startDate || tasks.some(t => t.goalId === goal.id && !t.hidden);
+}
 
 // ── Domain config — ORDER matches GoalGrid 9-grid: L→R, T→B, skip center ──────
 const DOMAIN_ORDER = [
@@ -431,7 +436,7 @@ function GoalCard({ goal, tasks, domainTheme, removeTask, setActiveGoalForTask, 
 
     return (
         <div style={{
-            scrollSnapAlign: 'start', minWidth: '100%', flexShrink: 0,
+            width: '100%',
             background: 'rgba(0,0,0,0.28)', border: `1px solid ${domainTheme.ring}`,
             borderRadius: '18px', padding: '16px', boxSizing: 'border-box',
             display: 'flex', flexDirection: 'column', gap: '12px'
@@ -554,13 +559,23 @@ function GoalCard({ goal, tasks, domainTheme, removeTask, setActiveGoalForTask, 
 }
 
 // ── Main TaskDecomposition component ──────────────────────────────────────────
-export default function TaskDecomposition() {
+export default function TaskDecomposition({ onBack }: { onBack?: () => void }) {
     const { goals, tasks, removeTask, timeBudget } = useStore();
     const [viewIndex, setViewIndex] = useState(0);
     const [activeGoalForTask, setActiveGoalForTask] = useState<Goal | null>(null);
     const [editingTask, setEditingTask] = useState<Task | null>(null);
     const [showOnboarding, setShowOnboarding] = useState(true);
     const [toast, setToast] = useState<string | null>(null);
+
+    const [activeCardIndex, setActiveCardIndex] = useState(0);
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        setActiveCardIndex(0);
+        if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollLeft = 0;
+        }
+    }, [viewIndex]);
 
     // FIX #4: Build domain list using GoalGrid order
     const filledDomains = DOMAIN_ORDER.filter(d => goals.some(g => g.domain === d));
@@ -575,14 +590,14 @@ export default function TaskDecomposition() {
     const isLastDomain = viewIndex === filledDomains.length - 1;
 
     const handleNext = useCallback(() => {
-        const missing = domainGoals.find(g => !g.startDate);
+        const missing = domainGoals.find(g => !hasTimeSet(g, tasks));
         if (missing) {
-            setToast('请先预估该愿景所需时间');
+            setToast('请先为愿景设置时间或拆解目标');
             return;
         }
         if (isLastDomain) return;
         setViewIndex(i => Math.min(i + 1, filledDomains.length - 1));
-    }, [domainGoals, isLastDomain, filledDomains.length]);
+    }, [domainGoals, tasks, isLastDomain, filledDomains.length]);
 
     const handlePrev = () => {
         setViewIndex(i => Math.max(i - 1, 0));
@@ -680,34 +695,65 @@ export default function TaskDecomposition() {
                     </div>
                 </div>
 
-// Scrollable domain content area - horizontally scrollable now
-                <div style={{
-                    flex: 1,
-                    display: 'flex',
-                    flexDirection: 'row',
-                    gap: '16px',
-                    overflowX: 'auto',
-                    overflowY: 'hidden',
-                    padding: '24px 20px',
-                    scrollSnapType: 'x mandatory',
-                    WebkitOverflowScrolling: 'touch',
-                    alignItems: 'flex-start'
-                }}>
-                    {domainGoals.map(goal => (
-                        <GoalCard
-                            key={goal.id}
-                            goal={goal}
-                            tasks={tasks}
-                            domainTheme={domainTheme}
-                            removeTask={removeTask}
-                            setActiveGoalForTask={setActiveGoalForTask}
-                            setEditingTask={setEditingTask}
-                        />
+                <div
+                    ref={scrollContainerRef}
+                    onScroll={(e) => {
+                        const target = e.target as HTMLDivElement;
+                        const itemWidth = target.clientWidth;
+                        if (itemWidth > 0) {
+                            const index = Math.round(target.scrollLeft / itemWidth);
+                            if (index !== activeCardIndex && index >= 0 && index < domainGoals.length) {
+                                setActiveCardIndex(index);
+                            }
+                        }
+                    }}
+                    style={{
+                        flex: 1,
+                        display: 'flex',
+                        flexDirection: 'row',
+                        overflowX: 'auto',
+                        overflowY: 'hidden',
+                        scrollSnapType: 'x mandatory',
+                        WebkitOverflowScrolling: 'touch',
+                        alignItems: 'stretch'
+                    }}>
+                    {domainGoals.map((goal) => (
+                        <div key={goal.id} style={{
+                            minWidth: '100%',
+                            flexShrink: 0,
+                            scrollSnapAlign: 'center',
+                            padding: '24px 20px',
+                            boxSizing: 'border-box',
+                            display: 'flex',
+                            flexDirection: 'column'
+                        }}>
+                            <GoalCard
+                                goal={goal}
+                                tasks={tasks}
+                                domainTheme={domainTheme}
+                                removeTask={removeTask}
+                                setActiveGoalForTask={setActiveGoalForTask}
+                                setEditingTask={setEditingTask}
+                            />
+                        </div>
                     ))}
-
-                    {/* Add padding at the end to allow the last item to scroll to the center/edge nicely */}
-                    <div style={{ minWidth: '1px', flexShrink: 0 }}></div>
                 </div>
+
+                {/* Pagination Dots */}
+                {domainGoals.length > 1 && (
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', marginBottom: '20px', flexShrink: 0 }}>
+                        {domainGoals.map((_, idx) => (
+                            <div key={idx} style={{
+                                width: activeCardIndex === idx ? '16px' : '6px',
+                                height: '6px',
+                                borderRadius: '3px',
+                                backgroundColor: activeCardIndex === idx ? domainTheme.solid : domainTheme.muted,
+                                opacity: activeCardIndex === idx ? 1 : 0.4,
+                                transition: 'all 0.3s ease'
+                            }} />
+                        ))}
+                    </div>
+                )}
 
                 {/* Bottom navigation — fixed at bottom */}
                 <div style={{
@@ -718,12 +764,17 @@ export default function TaskDecomposition() {
                     flexShrink: 0,
                 }}>
                     <button
-                        onClick={handlePrev}
-                        disabled={viewIndex === 0}
+                        onClick={() => {
+                            if (viewIndex === 0) {
+                                if (onBack) onBack();
+                            } else {
+                                handlePrev();
+                            }
+                        }}
                         style={{
-                            padding: '12px 18px', borderRadius: '16px', border: 'none', cursor: viewIndex === 0 ? 'not-allowed' : 'pointer',
+                            padding: '12px 18px', borderRadius: '16px', border: 'none', cursor: 'pointer',
                             background: 'rgba(255,255,255,0.07)', color: domainTheme.text,
-                            fontWeight: 700, fontSize: '13px', opacity: viewIndex === 0 ? 0.3 : 1,
+                            fontWeight: 700, fontSize: '13px',
                             display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0,
                             transition: 'opacity 0.2s',
                         }}
@@ -748,10 +799,10 @@ export default function TaskDecomposition() {
                         <a
                             href="/report"
                             onClick={e => {
-                                const missing = domainGoals.find(g => !g.startDate);
+                                const missing = domainGoals.find(g => !hasTimeSet(g, tasks));
                                 if (missing) {
                                     e.preventDefault();
-                                    setToast('请先预估该愿景所需时间');
+                                    setToast('请先为愿景设置时间或拆解目标');
                                 }
                             }}
                             style={{
