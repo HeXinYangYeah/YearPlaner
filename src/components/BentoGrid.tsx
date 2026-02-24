@@ -34,22 +34,56 @@ const DOMAIN_STYLE_LIGHT: Record<string, { bg: string; textColor: string; tagBg:
     '休闲娱乐': { bg: '#f3e8ff', textColor: '#6b21a8', tagBg: 'rgba(107,33,168,0.10)' },
 };
 
-// Asymmetric Bento layout
-// Grid: 4 cols, auto rows
-// [0: 2×2] [1: 2×1]
-// [0 cont ] [2: 1×1] [3: 1×1]
-// [4: 1×1] [5: 1×1] [6: 2×1]
-// [7: 4×1] spanning full
-const GRID_SPANS = [
-    { col: 'span 2', row: 'span 2' },  // 0 - hero
-    { col: 'span 2', row: 'span 1' },  // 1 - top right wide
-    { col: 'span 1', row: 'span 1' },  // 2
-    { col: 'span 1', row: 'span 1' },  // 3
-    { col: 'span 1', row: 'span 1' },  // 4
-    { col: 'span 1', row: 'span 1' },  // 5
-    { col: 'span 2', row: 'span 1' },  // 6 - bottom right wide
-    { col: 'span 4', row: 'span 1' },  // 7 - full width bottom
-];
+interface BlockData {
+    domain: Domain;
+    value: number;
+}
+
+interface BlockResult extends BlockData {
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+}
+
+function binaryTreemap(data: BlockData[], x: number, y: number, w: number, h: number): BlockResult[] {
+    if (data.length === 0) return [];
+    if (data.length === 1) return [{ ...data[0], x, y, w, h }];
+
+    const total = data.reduce((acc, d) => acc + d.value, 0);
+    let halfSum = 0;
+    let splitIndex = 1;
+    for (let i = 0; i < data.length; i++) {
+        halfSum += data[i].value;
+        if (halfSum >= total / 2) {
+            const prevDiff = Math.abs(total / 2 - (halfSum - data[i].value));
+            const currDiff = Math.abs(total / 2 - halfSum);
+            splitIndex = (prevDiff < currDiff && i > 0) ? i : i + 1;
+            break;
+        }
+    }
+    if (splitIndex <= 0) splitIndex = 1;
+    if (splitIndex >= data.length) splitIndex = data.length - 1;
+
+    const leftData = data.slice(0, splitIndex);
+    const rightData = data.slice(splitIndex);
+    const leftWeight = leftData.reduce((acc, d) => acc + d.value, 0);
+    const ratio = total > 0 ? leftWeight / total : 0.5;
+
+    if (w > h) {
+        const leftW = w * ratio;
+        return [
+            ...binaryTreemap(leftData, x, y, leftW, h),
+            ...binaryTreemap(rightData, x + leftW, y, w - leftW, h)
+        ];
+    } else {
+        const leftH = h * ratio;
+        return [
+            ...binaryTreemap(leftData, x, y, w, leftH),
+            ...binaryTreemap(rightData, x, y + leftH, w, h - leftH)
+        ];
+    }
+}
 
 function getKeywords(goals: Goal[], domain: Domain): string[] {
     const domainGoals = goals.filter(g => g.domain === domain);
@@ -57,145 +91,115 @@ function getKeywords(goals: Goal[], domain: Domain): string[] {
     return domainGoals.map(g => g.title.trim());
 }
 
-// Maximum keywords to show per cell based on grid span
-function getMaxKeywords(index: number): number {
-    // index 0 = hero (2×2), index 7 = full-width (4×1), index 1 = top-right wide (2×1)
-    if (index === 0) return 3; // hero cell is big but needs room for label
-    if (index === 7) return 4; // full-width, horizontal layout
-    if (index === 1 || index === 6) return 3; // wide cells
-    return 2; // small 1×1 cells — keep it sparse so text stays readable
-}
-
-// Adaptive font size: shrink for long text so it stays inside its chip
-function getAdaptiveFontSize(text: string, basePx: number): string {
-    const len = text.length;
-    if (len <= 6) return `${basePx}px`;
-    if (len <= 10) return `${Math.round(basePx * 0.9)}px`;
-    if (len <= 16) return `${Math.round(basePx * 0.8)}px`;
-    return `${Math.round(basePx * 0.7)}px`;
-}
-
 export default function BentoGrid({ allocations, goals, isDark = false }: BentoGridProps) {
-    const sortedDomains = [...DOMAIN_ORDER].sort(
-        (a, b) => (allocations[b] || 0) - (allocations[a] || 0)
-    );
     const STYLES = isDark ? DOMAIN_STYLE : DOMAIN_STYLE_LIGHT;
 
-    return (
-        <div
-            style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(4, 1fr)',
-                gridTemplateRows: 'repeat(4, 1fr)',
-                gap: '6px',
-                width: '100%',
-                height: '100%',
-            }}
-        >
-            {sortedDomains.map((domain, index) => {
-                const span = GRID_SPANS[index] || { col: 'span 1', row: 'span 1' };
-                const style = STYLES[domain] || STYLES['工作事业'];
-                const allKeywords = getKeywords(goals, domain);
-                const maxKw = getMaxKeywords(index);
-                const keywords = allKeywords.slice(0, maxKw);
-                const isHero = index === 0;
-                const isFullWidth = index === 7;
+    const totalAllo = [...DOMAIN_ORDER].reduce((acc, d) => acc + (allocations[d] || 0), 0);
+    const minWeight = Math.max(totalAllo * 0.05, 1);
 
-                // Font sizing: smaller cells need smaller fonts to stay contained
-                const isSmallCell = index >= 2 && index <= 6 && index !== 6;
-                const labelSize = isHero ? '13px' : isFullWidth ? '11px' : '10px';
-                const kwFontSize = isHero ? '14px' : isFullWidth ? '12px' : isSmallCell ? '11px' : '12px';
+    const data: BlockData[] = [...DOMAIN_ORDER].map(domain => ({
+        domain,
+        value: Math.max(allocations[domain] || 0, minWeight)
+    })).sort((a, b) => b.value - a.value);
+
+    const blocks = binaryTreemap(data, 0, 0, 100, 100);
+
+    return (
+        <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+            {blocks.map((block) => {
+                const domain = block.domain;
+                const style = STYLES[domain] || STYLES['工作事业'];
+                const area = block.w * block.h;
+                const maxKw = area > 2000 ? 5 : area > 1000 ? 3 : 2;
+                const keywords = getKeywords(goals, domain).slice(0, maxKw);
 
                 return (
                     <div
                         key={domain}
                         style={{
-                            gridColumn: span.col,
-                            gridRow: span.row,
-                            background: style.bg,
-                            borderRadius: '12px',
-                            padding: isHero ? '10px' : isFullWidth ? '8px 12px' : '8px',
-                            display: 'flex',
-                            flexDirection: isFullWidth ? 'row' : 'column',
-                            justifyContent: 'space-between',
-                            alignItems: isFullWidth ? 'center' : 'flex-start',
-                            overflow: 'hidden',
-                            minHeight: 0,
-                            minWidth: 0,
+                            position: 'absolute',
+                            left: `${block.x}%`,
+                            top: `${block.y}%`,
+                            width: `${block.w}%`,
+                            height: `${block.h}%`,
                             boxSizing: 'border-box',
+                            padding: '4px', // Creates the "gap"
                         }}
                     >
-                        {/* Domain label */}
                         <div
                             style={{
-                                fontSize: labelSize,
-                                fontWeight: 900,
-                                color: style.textColor,
-                                letterSpacing: '-0.3px',
-                                lineHeight: 1.1,
-                                flexShrink: 0,
-                                whiteSpace: 'nowrap',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                maxWidth: '100%',
-                            }}
-                        >
-                            {domain}
-                        </div>
-
-                        {/* Keywords */}
-                        <div
-                            style={{
+                                background: style.bg,
+                                borderRadius: '12px',
+                                padding: '10px 12px',
+                                width: '100%',
+                                height: '100%',
                                 display: 'flex',
-                                flexDirection: isFullWidth ? 'row' : 'column',
-                                flexWrap: isFullWidth ? 'wrap' : 'nowrap',
-                                gap: '3px',
-                                marginTop: isFullWidth ? 0 : '4px',
-                                alignItems: isFullWidth ? 'center' : 'flex-start',
-                                flex: isFullWidth ? 1 : undefined,
-                                justifyContent: isFullWidth ? 'flex-end' : 'flex-start',
-                                marginLeft: isFullWidth ? '8px' : 0,
+                                flexDirection: 'column',
                                 overflow: 'hidden',
-                                minWidth: 0,
-                                maxWidth: '100%',
+                                boxSizing: 'border-box',
+                                containerType: 'size', // Enable container queries for fluid typography
                             }}
                         >
-                            {keywords.length === 0 ? (
-                                <span style={{
-                                    fontSize: kwFontSize,
-                                    fontWeight: 700,
+                            {/* Domain label */}
+                            <div
+                                style={{
+                                    fontSize: 'clamp(10px, 12cqmin, 16px)',
+                                    fontWeight: 900,
                                     color: style.textColor,
-                                    opacity: 0.4,
-                                    fontStyle: 'italic',
-                                }}>
-                                    待填写
-                                </span>
-                            ) : keywords.map((kw, i) => {
-                                const adaptedSize = getAdaptiveFontSize(kw, parseFloat(kwFontSize));
-                                return (
+                                    letterSpacing: '-0.3px',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    flexShrink: 0,
+                                }}
+                            >
+                                {domain}
+                            </div>
+
+                            {/* Keywords container */}
+                            <div
+                                style={{
+                                    flex: 1,
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: '4px',
+                                    marginTop: '8px',
+                                    overflow: 'hidden',
+                                }}
+                            >
+                                {keywords.length === 0 ? (
+                                    <span style={{
+                                        fontSize: 'clamp(10px, 10cqmin, 14px)',
+                                        fontWeight: 700,
+                                        color: style.textColor,
+                                        opacity: 0.4,
+                                        fontStyle: 'italic',
+                                    }}>
+                                        待填写
+                                    </span>
+                                ) : keywords.map((kw, i) => (
                                     <span
                                         key={i}
                                         style={{
-                                            fontSize: adaptedSize,
+                                            fontSize: 'clamp(9px, 9cqmin, 13px)',
                                             fontWeight: 800,
                                             color: style.textColor,
                                             background: style.tagBg,
-                                            padding: '2px 6px',
-                                            borderRadius: '5px',
+                                            padding: '3px 8px',
+                                            borderRadius: '6px',
                                             lineHeight: 1.35,
-                                            wordBreak: 'break-all',
-                                            overflowWrap: 'break-word',
-                                            whiteSpace: 'normal',
-                                            maxWidth: '100%',
+                                            display: '-webkit-box',
+                                            WebkitLineClamp: 2,
+                                            WebkitBoxOrient: 'vertical',
                                             overflow: 'hidden',
-                                            display: 'block',
-                                            boxSizing: 'border-box',
+                                            textOverflow: 'ellipsis',
+                                            wordBreak: 'break-all',
                                         }}
                                     >
                                         {kw}
                                     </span>
-                                );
-                            })}
+                                ))}
+                            </div>
                         </div>
                     </div>
                 );
