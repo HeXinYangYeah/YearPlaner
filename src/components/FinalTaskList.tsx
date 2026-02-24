@@ -4,9 +4,10 @@ import { isActiveInMonth } from '../utils/reportUtils';
 
 interface FinalTaskListProps {
     selectedMonth: number | 'ALL';
+    domainsFilter?: string[];
 }
 
-export default function FinalTaskList({ selectedMonth }: FinalTaskListProps) {
+export default function FinalTaskList({ selectedMonth, domainsFilter }: FinalTaskListProps) {
     const { tasks, goals } = useStore();
     const visibleTasks = tasks.filter(t => !t.hidden);
 
@@ -16,6 +17,7 @@ export default function FinalTaskList({ selectedMonth }: FinalTaskListProps) {
     const domains: Record<string, { goal: Goal; tasks: Task[] }[]> = {};
 
     goals.forEach(goal => {
+        if (domainsFilter && !domainsFilter.includes(goal.domain)) return;
         if (!domains[goal.domain]) domains[goal.domain] = [];
         const goalTasks = tasks.filter(t => t.goalId === goal.id && !t.hidden);
         domains[goal.domain].push({ goal, tasks: goalTasks });

@@ -1,10 +1,8 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { ChevronRight, ChevronLeft, Calendar, BarChart3, ListTodo, FileText, HelpCircle } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Calendar, BarChart3, ListTodo, HelpCircle } from 'lucide-react';
 import GoalGrid from '../components/GoalGrid';
 import TimeBudgetSettings from '../components/TimeBudgetSettings';
 import TaskDecomposition from '../components/TaskDecomposition';
-import StickyProgressBar from '../components/StickyProgressBar';
 import { useStore } from '../store/useStore';
 
 const STEPS = [
@@ -20,15 +18,12 @@ export default function Home() {
 
     const validateStep = (step: number) => {
         if (step === 1) {
-            // Check theme
-            if (!theme || theme === '我的年度主题' || theme.trim() === '') {
+            if (!theme || theme === '我的年度主题' || theme === '填写年度主题' || theme.trim() === '') {
                 return '请输入你的 2026 年度主题。';
             }
-            // Check if all 8 domains have at least one goal
             const domains = ['学习成长', '体验突破', '休闲娱乐', '工作事业', '家庭生活', '身体健康', '财务理财', '人际社群'];
             const filledDomains = new Set(goals.map(g => g.domain));
             const missingDomains = domains.filter(d => !filledDomains.has(d as any));
-
             if (missingDomains.length > 0) {
                 return `还有一些领域没有填写愿景：${missingDomains.join('、')}。请点击空格子填写内容。`;
             }
@@ -40,11 +35,9 @@ export default function Home() {
         const error = validateStep(currentStep);
         if (error) {
             setValidationError(error);
-            // Clear error after 5 seconds
             setTimeout(() => setValidationError(null), 5000);
             return;
         }
-
         if (currentStep < 3) {
             setCurrentStep(currentStep + 1);
             setValidationError(null);
@@ -59,6 +52,11 @@ export default function Home() {
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     };
+
+    // Step 3 is full-screen (fixed position) — TaskDecomposition manages its own scroll
+    if (currentStep === 3) {
+        return <TaskDecomposition />;
+    }
 
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-16 pb-32">
@@ -113,59 +111,60 @@ export default function Home() {
                             <HelpCircle size={20} />
                         </button>
                     </div>
-                    <p className="text-[10px] text-indigo-500/60 font-black uppercase tracking-widest leading-none">Perspective & Focus</p>
+                    <p className="text-[10px] text-indigo-500/60 font-black uppercase tracking-widest leading-none">Perspective &amp; Focus</p>
                 </div>
             </div>
 
-            {currentStep > 1 && <StickyProgressBar />}
-            {/* Steps Progress Indicator */}
-            <div className="max-w-3xl mx-auto mb-16">
-                <div className="flex items-center justify-between relative">
-                    {/* Background Progress Line */}
-                    <div className="absolute top-1/2 left-0 w-full h-1 bg-slate-100 -translate-y-1/2 z-0"></div>
-                    <div
-                        className="absolute top-1/2 left-0 h-1 bg-indigo-500 -translate-y-1/2 z-0 transition-all duration-500"
-                        style={{ width: `${((currentStep - 1) / 2) * 100}%` }}
-                    ></div>
+            {/* Steps Progress Indicator — only shown on Step 1 */}
+            {currentStep === 1 && (
+                <div className="max-w-3xl mx-auto mb-16">
+                    <div className="flex items-center justify-between relative">
+                        {/* Background Progress Line */}
+                        <div className="absolute top-1/2 left-0 w-full h-1 bg-slate-100 -translate-y-1/2 z-0"></div>
+                        <div
+                            className="absolute top-1/2 left-0 h-1 bg-indigo-500 -translate-y-1/2 z-0 transition-all duration-500"
+                            style={{ width: `${((currentStep - 1) / 2) * 100}%` }}
+                        ></div>
 
-                    {STEPS.map((step) => {
-                        const Icon = step.icon;
-                        const isActive = currentStep >= step.id;
-                        const isCurrent = currentStep === step.id;
+                        {STEPS.map((step) => {
+                            const Icon = step.icon;
+                            const isActive = currentStep >= step.id;
+                            const isCurrent = currentStep === step.id;
 
-                        return (
-                            <div key={step.id} className="relative z-10 flex flex-col items-center group">
-                                <button
-                                    onClick={() => {
-                                        if (step.id < currentStep) {
-                                            setCurrentStep(step.id);
-                                            setValidationError(null);
-                                        }
-                                    }}
-                                    disabled={step.id >= currentStep}
-                                    className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-300 shadow-lg ${isCurrent
-                                        ? 'gradient-primary text-white scale-110'
-                                        : isActive
-                                            ? 'bg-indigo-100 text-indigo-600'
-                                            : 'bg-white text-slate-300 border border-slate-100'
-                                        }`}
-                                >
-                                    <Icon size={20} />
-                                </button>
-                                <span className={`mt-3 text-xs font-black uppercase tracking-tighter transition-colors ${isCurrent ? 'text-indigo-600' : isActive ? 'text-indigo-400' : 'text-slate-300'
-                                    }`}>
-                                    {step.title}
-                                </span>
-                            </div>
-                        );
-                    })}
+                            return (
+                                <div key={step.id} className="relative z-10 flex flex-col items-center group">
+                                    <button
+                                        onClick={() => {
+                                            if (step.id < currentStep) {
+                                                setCurrentStep(step.id);
+                                                setValidationError(null);
+                                            }
+                                        }}
+                                        disabled={step.id >= currentStep}
+                                        className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-300 shadow-lg ${isCurrent
+                                            ? 'gradient-primary text-white scale-110'
+                                            : isActive
+                                                ? 'bg-indigo-100 text-indigo-600'
+                                                : 'bg-white text-slate-300 border border-slate-100'
+                                            }`}
+                                    >
+                                        <Icon size={20} />
+                                    </button>
+                                    <span className={`mt-3 text-xs font-black uppercase tracking-tighter transition-colors ${isCurrent ? 'text-indigo-600' : isActive ? 'text-indigo-400' : 'text-slate-300'
+                                        }`}>
+                                        {step.title}
+                                    </span>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    <div className="text-center mt-10">
+                        <h2 className="text-2xl font-black text-slate-800 mb-2">{STEPS[currentStep - 1].title}</h2>
+                        <p className="text-slate-500 text-sm max-w-sm mx-auto">{STEPS[currentStep - 1].description}</p>
+                    </div>
                 </div>
-
-                <div className="text-center mt-10">
-                    <h2 className="text-2xl font-black text-slate-800 mb-2">{STEPS[currentStep - 1].title}</h2>
-                    <p className="text-slate-500 text-sm max-w-sm mx-auto">{STEPS[currentStep - 1].description}</p>
-                </div>
-            </div>
+            )}
 
             {/* Main Content Areas */}
             <main className="min-h-[60vh] transition-all duration-500">
@@ -181,23 +180,11 @@ export default function Home() {
                     </section>
                 )}
 
-                {currentStep === 3 && (
-                    <section className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        <TaskDecomposition />
 
-                        <div className="text-center py-20 animate-in fade-in zoom-in duration-1000">
-                            <Link to="/report" className="px-10 py-5 gradient-primary text-white rounded-full font-bold text-xl shadow-soft-hover hover:scale-105 hover:shadow-2xl transition-all inline-flex items-center gap-3">
-                                <FileText className="w-6 h-6" />
-                                生成 {new Date().getFullYear()} 年度报告
-                                <ChevronRight className="w-5 h-5" />
-                            </Link>
-                        </div>
-                    </section>
-                )}
             </main>
 
-            {/* Bottom Navigation Dock */}
-            {(!showTutorial && !activeModal) && (
+            {/* Bottom Navigation Dock — hidden on step 3 (wizard handles its own nav) */}
+            {(!showTutorial && !activeModal && currentStep < 3) && (
                 <div className="fixed bottom-0 left-0 w-full p-4 z-[50] md:p-8 flex justify-center pointer-events-none animate-in slide-in-from-bottom-2 duration-300">
                     <div className="bg-white/80 backdrop-blur-xl border border-slate-100 p-2 rounded-[2rem] shadow-2xl flex items-center gap-3 pointer-events-auto max-w-md w-full">
                         <button

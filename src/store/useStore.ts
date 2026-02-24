@@ -142,7 +142,7 @@ export const useStore = create<PlannerState>()(
                 const { db } = await import('../firebase');
 
                 const id = Math.random().toString(36).substring(2, 15);
-                await setDoc(doc(collection(db, 'plans'), id), {
+                const planData = JSON.parse(JSON.stringify({
                     theme,
                     goals,
                     tasks,
@@ -150,7 +150,9 @@ export const useStore = create<PlannerState>()(
                     createdAt: Date.now(),
                     exportCount: 0,
                     lastExported: null
-                });
+                }));
+
+                await setDoc(doc(collection(db, 'plans'), id), planData);
                 set({ shareId: id });
                 return id;
             },
