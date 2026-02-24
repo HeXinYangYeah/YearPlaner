@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import type { Domain } from '../store/useStore';
-import { X, Plus, Trash2, ArrowRight, Lightbulb, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
+import { X, Plus, Trash2, ArrowRight, Lightbulb, CheckCircle2, ChevronDown, ChevronUp, Edit2 } from 'lucide-react';
 
 interface GoalModalProps {
     domain: Domain;
@@ -128,8 +128,10 @@ const TUTORIAL_EXAMPLES: Record<Domain, { vague: string, specific: string[] }> =
 };
 
 export default function GoalModal({ domain, isOpen, onClose }: GoalModalProps) {
-    const { goals, addGoal, removeGoal, setActiveModal } = useStore();
+    const { goals, addGoal, removeGoal, updateGoal, setActiveModal } = useStore();
     const [newTitle, setNewTitle] = useState('');
+    const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
+    const [editingTitle, setEditingTitle] = useState('');
 
     // Tutorial state - show if no goals in this domain yet
     const domainGoals = goals.filter(g => g.domain === domain);
@@ -181,7 +183,7 @@ export default function GoalModal({ domain, isOpen, onClose }: GoalModalProps) {
             <div className="bg-[#f8f9fa] rounded-t-3xl md:rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh] md:max-h-[90vh] animate-in slide-in-from-bottom-5 md:zoom-in-95 duration-300">
                 {/* Header */}
                 <div className="px-6 py-5 border-b border-slate-200 flex justify-between items-center bg-white">
-                    <h2 className="text-xl md:text-2xl font-bold font-serif text-slate-800">{domain} 目标设置</h2>
+                    <h2 className="text-xl md:text-2xl font-bold font-serif text-slate-800">{domain} 愿景思考</h2>
                     <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition">
                         <X size={24} />
                     </button>
@@ -225,7 +227,7 @@ export default function GoalModal({ domain, isOpen, onClose }: GoalModalProps) {
                                     onClick={() => setShowTutorial(false)}
                                     className="w-full py-4 gradient-primary text-white rounded-2xl font-bold text-lg shadow-soft-hover hover:scale-[1.02] transition-transform"
                                 >
-                                    我懂了，开始设置 {domain} 目标
+                                    我懂了，开始设置 {domain} 愿景
                                 </button>
                             </div>
                         </div>
@@ -241,16 +243,62 @@ export default function GoalModal({ domain, isOpen, onClose }: GoalModalProps) {
                                     {domainGoals.map((g, i) => (
                                         <div key={g.id} className="relative flex items-center justify-between p-4 bg-white/30 backdrop-blur-lg border border-white/50 rounded-2xl group animate-in zoom-in-95 duration-200 shadow-[0_4px_16px_0_rgba(31,38,135,0.05)] overflow-hidden">
                                             <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-white/10 pointer-events-none" />
-                                            <span className="font-bold text-slate-700 relative z-10">
-                                                <span className="text-indigo-400 mr-2 text-sm">{i + 1}.</span>
-                                                {g.title}
-                                            </span>
-                                            <button
-                                                onClick={() => removeGoal(g.id)}
-                                                className="relative z-10 text-red-300 hover:text-red-500 p-2 hover:bg-red-50/50 rounded-xl transition opacity-100 md:opacity-0 group-hover:opacity-100"
-                                            >
-                                                <Trash2 size={18} />
-                                            </button>
+                                            {editingGoalId === g.id ? (
+                                                <div className="relative flex items-center w-full z-10">
+                                                    <input
+                                                        type="text"
+                                                        value={editingTitle}
+                                                        onChange={(e) => setEditingTitle(e.target.value)}
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === 'Enter') {
+                                                                if (editingTitle.trim()) {
+                                                                    updateGoal(g.id, { title: editingTitle.trim() });
+                                                                }
+                                                                setEditingGoalId(null);
+                                                            } else if (e.key === 'Escape') {
+                                                                setEditingGoalId(null);
+                                                            }
+                                                        }}
+                                                        autoFocus
+                                                        className="w-full pl-3 pr-10 py-1.5 bg-white border border-indigo-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-slate-700 text-sm"
+                                                    />
+                                                    <button
+                                                        onClick={() => {
+                                                            if (editingTitle.trim()) {
+                                                                updateGoal(g.id, { title: editingTitle.trim() });
+                                                            }
+                                                            setEditingGoalId(null);
+                                                        }}
+                                                        className="absolute right-1 top-1/2 -translate-y-1/2 p-1 text-indigo-500 hover:text-indigo-600 transition"
+                                                    >
+                                                        <CheckCircle2 size={16} />
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <span className="font-bold text-slate-700 relative z-10 flex-1">
+                                                        <span className="text-indigo-400 mr-2 text-sm">{i + 1}.</span>
+                                                        {g.title}
+                                                    </span>
+                                                    <div className="relative z-10 flex items-center gap-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <button
+                                                            onClick={() => {
+                                                                setEditingGoalId(g.id);
+                                                                setEditingTitle(g.title);
+                                                            }}
+                                                            className="text-slate-400 hover:text-indigo-500 p-2 hover:bg-indigo-50/50 rounded-xl transition"
+                                                        >
+                                                            <Edit2 size={18} />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => removeGoal(g.id)}
+                                                            className="text-red-300 hover:text-red-500 p-2 hover:bg-red-50/50 rounded-xl transition"
+                                                        >
+                                                            <Trash2 size={18} />
+                                                        </button>
+                                                    </div>
+                                                </>
+                                            )}
                                         </div>
                                     ))}
                                 </div>
