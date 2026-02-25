@@ -9,6 +9,7 @@ export interface Goal {
     id: string;
     domain: Domain;
     title: string;
+    shortTitle?: string; // AI generated concise keyword 2-4 chars
     createdAt: number;
     // For un-decomposed goals time tracking (Part C)
     startDate?: string;
