@@ -3,7 +3,7 @@ import { useStore } from '../store/useStore';
 import type { Goal, Task } from '../store/useStore';
 import {
     ChevronLeft, ChevronRight, Clock, Edit2, Trash2, AlertTriangle,
-    Plus, Target, CheckCircle2, Calendar, Timer
+    Plus, Target, CheckCircle2, Calendar, Timer, Loader2
 } from 'lucide-react';
 import TaskModal from './TaskModal';
 import { eachWeekOfInterval, parseISO, startOfWeek, endOfWeek, format } from 'date-fns';
@@ -433,6 +433,62 @@ function GoalCard({ goal, tasks, domainTheme, removeTask, setActiveGoalForTask, 
 
     const [settingTime, setSettingTime] = useState(false);
     const hasTimeSet = !!goal.startDate;
+    const [isAiLoading, setIsAiLoading] = useState(false);
+    const { addTask } = useStore();
+
+    const handleDecompose = async (goal: Goal) => {
+        const params = new URLSearchParams(window.location.search);
+        const code = params.get('code');
+
+        if (!code) {
+            // Fallback to manual mode if no code
+            setActiveGoalForTask(goal);
+            return;
+        }
+
+        setIsAiLoading(true);
+        try {
+            const response = await fetch('/api/decompose-vision', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    code: code,
+                    vision: goal.title,
+                    domain: goal.domain
+                })
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || '请求 AI 服务失败');
+            }
+
+            if (result.data && result.data.tasks && Array.isArray(result.data.tasks)) {
+                result.data.tasks.forEach((taskTitle: string) => {
+                    const cleanTitle = taskTitle.replace(/^目标\d+[:：]\s*/, '').trim();
+                    addTask({
+                        goalId: goal.id,
+                        title: cleanTitle,
+                        type: 'project',
+                        startDate: '',
+                        endDate: '',
+                        painScore: 5,
+                        passionScore: 5,
+                        timingScore: 5,
+                        hidden: false
+                    });
+                });
+            }
+        } catch (e: any) {
+            console.error("AI Decomposition failed:", e);
+            alert(e.message || "智能拆解失败，请重试");
+            // If API fails, surface the manual entry modal
+            setActiveGoalForTask(goal);
+        } finally {
+            setIsAiLoading(false);
+        }
+    };
 
     return (
         <div style={{
@@ -471,18 +527,29 @@ function GoalCard({ goal, tasks, domainTheme, removeTask, setActiveGoalForTask, 
                     </div>
 
                     <button
-                        onClick={() => setActiveGoalForTask(goal)}
+                        onClick={() => handleDecompose(goal)}
+                        disabled={isAiLoading}
                         style={{
                             width: '100%', padding: '14px', borderRadius: '14px',
                             border: 'none',
-                            background: domainTheme.chip, cursor: 'pointer',
+                            background: domainTheme.chip, cursor: isAiLoading ? 'not-allowed' : 'pointer',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             gap: '8px', transition: 'all 0.2s', color: domainTheme.text,
-                            fontSize: '14px', fontWeight: 800
+                            fontSize: '14px', fontWeight: 800,
+                            opacity: isAiLoading ? 0.7 : 1
                         }}
                     >
-                        <Plus size={18} color={domainTheme.solid} />
-                        将愿景拆解为具体目标
+                        {isAiLoading ? (
+                            <>
+                                <Loader2 size={18} className="animate-spin" color={domainTheme.solid} />
+                                <span style={{ color: domainTheme.text }}>AI 智能拆解中...</span>
+                            </>
+                        ) : (
+                            <>
+                                <Plus size={18} color={domainTheme.solid} />
+                                智能拆解为具体目标
+                            </>
+                        )}
                     </button>
                     <p style={{ fontSize: '11px', color: domainTheme.muted, textAlign: 'center', marginTop: '-4px' }}>
                         拆解为具体的习惯或项目，可极大提升成功率
