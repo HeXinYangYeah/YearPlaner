@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import type { Domain } from '../store/useStore';
-import { X, Trash2, ArrowRight, Lightbulb, CheckCircle2, ChevronDown, ChevronUp, Edit2, Sparkles, Loader2, AlertCircle } from 'lucide-react';
+import { X, Trash2, ArrowRight, Lightbulb, CheckCircle2, ChevronDown, ChevronUp, Edit2, Sparkles, Loader2 } from 'lucide-react';
 // Removed unused Firebase imports: import { getFunctions, httpsCallable } from 'firebase/functions';
 // Removed unused Firebase imports: import { app } from '../firebase';
 
