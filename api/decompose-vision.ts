@@ -1,4 +1,5 @@
-import { db } from './_firebase-admin';
+import { getDb } from './_firebase-admin.js';
+
 
 export default async function handler(req: any, res: any) {
     if (req.method !== 'POST') {
@@ -16,6 +17,7 @@ export default async function handler(req: any, res: any) {
     }
 
     try {
+        const db = getDb();
         // 1. Verify code validity in Firestore (without decrementing)
         const codeRef = db.collection("access_codes").doc(code);
         const codeDoc = await codeRef.get();
@@ -42,19 +44,15 @@ export default async function handler(req: any, res: any) {
         }
 
         const prompt = `你是一个目标管理和行动拆解大师。用户的年度愿景是：【${vision}】（属于 ${domain} 领域）。
-请按照以下三个步骤进行思考，并最终输出 3-5 个具体、可落地、高回报的今年行动任务。
+请按照以下思考步骤，输出恰好 5 个具体、可落地的相关行动目标，供用户选择。
 
-第一步：定义（Define）
-将模糊的感性词汇翻译成清晰、可衡量的定义。
+要求：
+1. 必须恰好提供 5 个选项。
+2. 每个选项的字数严格限制在 12 个字以内。
+3. 选项名称必须精简、一目了然（例如：“每周跑步三次”、“考取PMP证书”），绝对不要在选项名称中包含类似“在年底前”、“期限为”等有关截止时间的描述。
+4. 请直接返回一个纯 JSON 数组，不要包含 Markdown 代码块符号或其他任何解释文本。
 
-第二步：规划（Plan）
-根据定义算出所需的资源，列出几种可能的实现方式。
-
-第三步：目标（Target）
-从路径中选择一个可行方向，设定今年内可执行、有截止时间的具体目标。
-
-请直接返回一个纯 JSON 格式的结果，不要包含 Markdown 代码块符号或其他解释文本。
-格式要求：["目标1: xxx", "目标2: xxx", "目标3: xxx"]`;
+格式要求：["选项1", "选项2", "选项3", "选项4", "选项5"]`;
 
         const response = await fetch("https://api.deepseek.com/chat/completions", {
             method: "POST",
@@ -72,8 +70,15 @@ export default async function handler(req: any, res: any) {
         });
 
         if (!response.ok) {
-            console.error("DeepSeek API Error:", await response.text());
-            return res.status(502).json({ error: "请求 AI 服务器失败" });
+            const errText = await response.text();
+            console.error("DeepSeek API Error:", errText);
+            let parsedErr;
+            try {
+                parsedErr = JSON.parse(errText);
+            } catch {
+                parsedErr = { error: { message: errText } };
+            }
+            throw new Error(`请求 AI 服务器失败: ${parsedErr?.error?.message || errText}`);
         }
 
         const data = await response.json();

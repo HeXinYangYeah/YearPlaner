@@ -59,7 +59,14 @@ export default function Home() {
                     body: JSON.stringify({ code })
                 });
 
-                const result = await response.json();
+                const text = await response.text();
+                let result: any = {};
+                try {
+                    result = JSON.parse(text);
+                } catch {
+                    console.error('Server returned non-JSON:', text);
+                    throw new Error('服务器返回了无效的响应，请检查 Vercel 后端配置（环境变量是否已设置）。');
+                }
 
                 if (response.ok && result.data && result.data.success) {
                     console.log('Usage consumed successfully');

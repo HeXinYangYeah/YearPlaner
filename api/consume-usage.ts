@@ -1,4 +1,5 @@
-import { db } from './_firebase-admin';
+import { getDb } from './_firebase-admin.js';
+
 
 export default async function handler(req: any, res: any) {
     if (req.method !== 'POST') {
@@ -11,9 +12,9 @@ export default async function handler(req: any, res: any) {
         return res.status(400).json({ error: "访问码是必需的" });
     }
 
-    const codeRef = db.collection("access_codes").doc(code);
-
     try {
+        const db = getDb();
+        const codeRef = db.collection("access_codes").doc(code);
         await db.runTransaction(async (t) => {
             const doc = await t.get(codeRef);
             if (!doc.exists) {

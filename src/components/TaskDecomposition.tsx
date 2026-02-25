@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import TaskModal from './TaskModal';
 import { eachWeekOfInterval, parseISO, startOfWeek, endOfWeek, format } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
 
 // ── Helper: check if goal has time set or is decomposed ────────────────────────
 function hasTimeSet(goal: Goal, tasks: Task[]) {
@@ -427,13 +428,24 @@ function InlineTimePicker({ goal, theme, autoOpen, onCancel }: { goal: Goal; the
 }
 
 // ── Goal Card with mutually exclusive choices ─────────────────────────────────
-function GoalCard({ goal, tasks, domainTheme, removeTask, setActiveGoalForTask, setEditingTask }: any) {
+function GoalCard({ goal, tasks, domainTheme, removeTask, setActiveGoalForTask, setEditingTask, setAiSuggestionsActive }: any) {
     const goalTasks = tasks.filter((t: Task) => t.goalId === goal.id && !t.hidden);
     const isDecomposed = goalTasks.length > 0;
 
     const [settingTime, setSettingTime] = useState(false);
     const hasTimeSet = !!goal.startDate;
     const [isAiLoading, setIsAiLoading] = useState(false);
+
+    // New state for AI suggestions
+    const [aiSuggestions, setAiSuggestions] = useState<string[] | null>(null);
+    const [selectedSuggestions, setSelectedSuggestions] = useState<Set<string>>(new Set());
+
+    useEffect(() => {
+        if (setAiSuggestionsActive) {
+            setAiSuggestionsActive(!!aiSuggestions);
+        }
+    }, [aiSuggestions, setAiSuggestionsActive]);
+
     const { addTask } = useStore();
 
     const handleDecompose = async (goal: Goal) => {
@@ -465,20 +477,10 @@ function GoalCard({ goal, tasks, domainTheme, removeTask, setActiveGoalForTask, 
             }
 
             if (result.data && result.data.tasks && Array.isArray(result.data.tasks)) {
-                result.data.tasks.forEach((taskTitle: string) => {
-                    const cleanTitle = taskTitle.replace(/^目标\d+[:：]\s*/, '').trim();
-                    addTask({
-                        goalId: goal.id,
-                        title: cleanTitle,
-                        type: 'project',
-                        startDate: '',
-                        endDate: '',
-                        painScore: 5,
-                        passionScore: 5,
-                        timingScore: 5,
-                        hidden: false
-                    });
-                });
+                // Check if they came back as options. Max 5. 
+                let options = result.data.tasks.map((taskTitle: string) => taskTitle.replace(/^目标\d+[:：]\s*/, '').replace(/^选项\d+[:：]\s*/, '').trim()).slice(0, 5);
+                setAiSuggestions(options);
+                setSelectedSuggestions(new Set()); // Reset selections
             }
         } catch (e: any) {
             console.error("AI Decomposition failed:", e);
@@ -502,7 +504,7 @@ function GoalCard({ goal, tasks, domainTheme, removeTask, setActiveGoalForTask, 
             </h3>
 
             {/* State 1: Nothing chosen yet */}
-            {!isDecomposed && !hasTimeSet && !settingTime && (
+            {!isDecomposed && !hasTimeSet && !settingTime && !aiSuggestions && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '8px' }}>
                     <button
                         onClick={() => setSettingTime(true)}
@@ -557,8 +559,105 @@ function GoalCard({ goal, tasks, domainTheme, removeTask, setActiveGoalForTask, 
                 </div>
             )}
 
+            {/* State 1.5: AI Suggestions returned, waiting for user selection */}
+            {aiSuggestions && !isDecomposed && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '4px' }}>
+                    <p style={{ fontSize: '13px', fontWeight: 800, color: domainTheme.muted, marginBottom: '0px' }}>
+                        请选出你想执行的具体目标：
+                    </p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {aiSuggestions.map((suggestion, idx) => {
+                            const isSelected = selectedSuggestions.has(suggestion);
+                            return (
+                                <button
+                                    key={idx}
+                                    onClick={() => {
+                                        const newSet = new Set(selectedSuggestions);
+                                        if (isSelected) newSet.delete(suggestion);
+                                        else newSet.add(suggestion);
+                                        setSelectedSuggestions(newSet);
+                                    }}
+                                    style={{
+                                        width: '100%', padding: '12px 14px', borderRadius: '12px',
+                                        border: `1.5px solid ${isSelected ? domainTheme.solid : 'rgba(255,255,255,0.08)'}`,
+                                        background: isSelected ? domainTheme.chip : 'rgba(255,255,255,0.04)',
+                                        cursor: 'pointer', display: 'flex', alignItems: 'center',
+                                        gap: '12px', transition: 'all 0.2s', textAlign: 'left',
+                                    }}
+                                >
+                                    <div style={{
+                                        width: '20px', height: '20px', borderRadius: '6px',
+                                        border: `2px solid ${isSelected ? domainTheme.solid : 'rgba(255,255,255,0.2)'}`,
+                                        background: isSelected ? domainTheme.solid : 'transparent',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        flexShrink: 0,
+                                    }}>
+                                        {isSelected && <CheckCircle2 size={12} color="#000" strokeWidth={4} />}
+                                    </div>
+                                    <span style={{ fontSize: '14px', fontWeight: 700, color: isSelected ? '#fff' : domainTheme.muted, wordBreak: 'break-word', lineHeight: 1.3 }}>
+                                        {suggestion}
+                                    </span>
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '4px' }}>
+                        <button
+                            onClick={() => {
+                                setAiSuggestions(null);
+                                handleDecompose(goal); // re-trigger AI
+                            }}
+                            disabled={isAiLoading}
+                            style={{
+                                padding: '12px', borderRadius: '12px',
+                                border: `1.5px solid rgba(255,255,255,0.1)`,
+                                background: 'transparent', color: domainTheme.text,
+                                fontSize: '14px', fontWeight: 800, cursor: isAiLoading ? 'not-allowed' : 'pointer',
+                                opacity: isAiLoading ? 0.7 : 1, transition: 'all 0.2s',
+                            }}
+                        >
+                            {isAiLoading ? '生成中...' : '换一批'}
+                        </button>
+                        <button
+                            onClick={() => {
+                                if (selectedSuggestions.size === 0) {
+                                    alert('请至少选择一项任务，或点击"换一批"');
+                                    return;
+                                }
+                                // Add selected tasks
+                                Array.from(selectedSuggestions).forEach(title => {
+                                    addTask({
+                                        goalId: goal.id,
+                                        title: title,
+                                        type: 'habit', // Bug 2: Default to habit
+                                        startDate: '',
+                                        endDate: '',
+                                        painScore: 5,
+                                        passionScore: 5,
+                                        timingScore: 5,
+                                        hidden: false
+                                    });
+                                });
+                                setAiSuggestions(null);
+                                setSelectedSuggestions(new Set());
+                            }}
+                            style={{
+                                padding: '12px', borderRadius: '12px', border: 'none',
+                                background: selectedSuggestions.size > 0 ? domainTheme.solid : 'rgba(255,255,255,0.1)',
+                                color: selectedSuggestions.size > 0 ? '#000' : 'rgba(255,255,255,0.3)',
+                                fontSize: '14px', fontWeight: 800, transition: 'all 0.2s',
+                                cursor: selectedSuggestions.size > 0 ? 'pointer' : 'not-allowed',
+                            }}
+                        >
+                            确定添加 ({selectedSuggestions.size})
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* State 2: Time setting mode */}
-            {(!isDecomposed && (settingTime || hasTimeSet)) && (
+            {(!isDecomposed && !aiSuggestions && (settingTime || hasTimeSet)) && (
                 <InlineTimePicker
                     goal={goal}
                     theme={domainTheme}
@@ -627,12 +726,14 @@ function GoalCard({ goal, tasks, domainTheme, removeTask, setActiveGoalForTask, 
 
 // ── Main TaskDecomposition component ──────────────────────────────────────────
 export default function TaskDecomposition({ onBack }: { onBack?: () => void }) {
+    const navigate = useNavigate();
     const { goals, tasks, removeTask, timeBudget } = useStore();
     const [viewIndex, setViewIndex] = useState(0);
     const [activeGoalForTask, setActiveGoalForTask] = useState<Goal | null>(null);
     const [editingTask, setEditingTask] = useState<Task | null>(null);
     const [showOnboarding, setShowOnboarding] = useState(true);
     const [toast, setToast] = useState<string | null>(null);
+    const [isAnyAiSuggestionsActive, setIsAnyAiSuggestionsActive] = useState(false);
 
     const [activeCardIndex, setActiveCardIndex] = useState(0);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -656,15 +757,35 @@ export default function TaskDecomposition({ onBack }: { onBack?: () => void }) {
 
     const isLastDomain = viewIndex === filledDomains.length - 1;
 
+    // Strict validation utility
+    const isGoalFullyTimed = (goal: Goal, allTasks: Task[]) => {
+        const goalTasks = allTasks.filter(t => t.goalId === goal.id && !t.hidden);
+        if (goalTasks.length > 0) {
+            // Evaluates decomposed tasks: ALL tasks under this goal MUST have a startDate/endDate AND a time budget
+            return goalTasks.every(t => (
+                t.startDate && t.endDate && (t.dailyMinutes || t.weeklyHours)
+            ));
+        } else {
+            // Evaluates direct vision: MUST have startDate/endDate AND a time budget
+            return !!(goal.startDate && goal.endDate && (goal.dailyMinutes || goal.weeklyHours));
+        }
+    };
+
     const handleNext = useCallback(() => {
-        const missing = domainGoals.find(g => !hasTimeSet(g, tasks));
-        if (missing) {
-            setToast('请先为愿景设置时间或拆解目标');
+        if (isAnyAiSuggestionsActive) {
+            setToast('请先处理未确认的 AI 拆解建议');
             return;
         }
+
+        const missingTimeGoal = domainGoals.find(g => !isGoalFullyTimed(g, tasks));
+        if (missingTimeGoal) {
+            setToast('请为该领域下所有的愿景和子目标设置起止日期与时长');
+            return;
+        }
+
         if (isLastDomain) return;
         setViewIndex(i => Math.min(i + 1, filledDomains.length - 1));
-    }, [domainGoals, tasks, isLastDomain, filledDomains.length]);
+    }, [domainGoals, tasks, isLastDomain, filledDomains.length, isAnyAiSuggestionsActive]);
 
     const handlePrev = () => {
         setViewIndex(i => Math.max(i - 1, 0));
@@ -790,9 +911,11 @@ export default function TaskDecomposition({ onBack }: { onBack?: () => void }) {
                             flexShrink: 0,
                             scrollSnapAlign: 'center',
                             padding: '24px 20px',
+                            paddingBottom: '160px', // Bug 3: Add extra padding to ensure GoalCard contents and buttons aren't hidden by the fixed bottom bar
                             boxSizing: 'border-box',
                             display: 'flex',
-                            flexDirection: 'column'
+                            flexDirection: 'column',
+                            overflowY: 'auto'
                         }}>
                             <GoalCard
                                 goal={goal}
@@ -801,6 +924,7 @@ export default function TaskDecomposition({ onBack }: { onBack?: () => void }) {
                                 removeTask={removeTask}
                                 setActiveGoalForTask={setActiveGoalForTask}
                                 setEditingTask={setEditingTask}
+                                setAiSuggestionsActive={setIsAnyAiSuggestionsActive}
                             />
                         </div>
                     ))}
@@ -875,7 +999,7 @@ export default function TaskDecomposition({ onBack }: { onBack?: () => void }) {
                                 // Navigate to report with code
                                 const params = new URLSearchParams(window.location.search);
                                 const code = params.get('code');
-                                window.location.href = `/report${code ? `?code=${code}` : ''}`;
+                                navigate(`/report${code ? `?code=${code}` : ''}`);
                             }}
                             style={{
                                 flex: 1, padding: '12px', borderRadius: '16px', border: 'none', cursor: 'pointer',
