@@ -506,6 +506,58 @@ function GoalCard({ goal, tasks, domainTheme, removeTask, setActiveGoalForTask, 
             {/* State 1: Nothing chosen yet */}
             {!isDecomposed && !hasTimeSet && !settingTime && !aiSuggestions && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '8px' }}>
+
+                    <button
+                        onClick={() => setActiveGoalForTask(goal)}
+                        style={{
+                            width: '100%', padding: '14px', borderRadius: '14px',
+                            border: 'none',
+                            background: domainTheme.chip, cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            gap: '8px', transition: 'all 0.2s', color: domainTheme.text,
+                            fontSize: '14px', fontWeight: 800,
+                        }}
+                    >
+                        <Plus size={18} color={domainTheme.solid} />
+                        手动添加具体目标
+                    </button>
+
+                    <button
+                        onClick={() => handleDecompose(goal)}
+                        disabled={isAiLoading}
+                        style={{
+                            width: '100%', padding: '14px', borderRadius: '14px',
+                            border: 'none',
+                            background: 'rgba(99, 102, 241, 0.15)', cursor: isAiLoading ? 'not-allowed' : 'pointer',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            gap: '8px', transition: 'all 0.2s', color: '#818cf8',
+                            fontSize: '14px', fontWeight: 800,
+                            opacity: isAiLoading ? 0.7 : 1
+                        }}
+                    >
+                        {isAiLoading ? (
+                            <>
+                                <Loader2 size={18} className="animate-spin" color="#818cf8" />
+                                <span style={{ color: '#818cf8' }}>AI智能拆解中...</span>
+                            </>
+                        ) : (
+                            <>
+                                <Target size={18} color="#818cf8" />
+                                AI智能拆解获取启发
+                            </>
+                        )}
+                    </button>
+
+                    <p style={{ fontSize: '11px', color: domainTheme.muted, textAlign: 'center', marginTop: '-4px' }}>
+                        拆解为具体的习惯或项目，可极大提升成功率
+                    </p>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.1)' }}></div>
+                        <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 700 }}>或</span>
+                        <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.1)' }}></div>
+                    </div>
+
                     <button
                         onClick={() => setSettingTime(true)}
                         style={{
@@ -522,40 +574,6 @@ function GoalCard({ goal, tasks, domainTheme, removeTask, setActiveGoalForTask, 
                         直接为愿景设置时间
                     </button>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.1)' }}></div>
-                        <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 700 }}>或</span>
-                        <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.1)' }}></div>
-                    </div>
-
-                    <button
-                        onClick={() => handleDecompose(goal)}
-                        disabled={isAiLoading}
-                        style={{
-                            width: '100%', padding: '14px', borderRadius: '14px',
-                            border: 'none',
-                            background: domainTheme.chip, cursor: isAiLoading ? 'not-allowed' : 'pointer',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            gap: '8px', transition: 'all 0.2s', color: domainTheme.text,
-                            fontSize: '14px', fontWeight: 800,
-                            opacity: isAiLoading ? 0.7 : 1
-                        }}
-                    >
-                        {isAiLoading ? (
-                            <>
-                                <Loader2 size={18} className="animate-spin" color={domainTheme.solid} />
-                                <span style={{ color: domainTheme.text }}>AI 智能拆解中...</span>
-                            </>
-                        ) : (
-                            <>
-                                <Plus size={18} color={domainTheme.solid} />
-                                智能拆解为具体目标
-                            </>
-                        )}
-                    </button>
-                    <p style={{ fontSize: '11px', color: domainTheme.muted, textAlign: 'center', marginTop: '-4px' }}>
-                        拆解为具体的习惯或项目，可极大提升成功率
-                    </p>
                 </div>
             )}
 
