@@ -796,17 +796,22 @@ export default function TaskDecomposition({ onBack }: { onBack?: () => void }) {
                             下一步：{filledDomains[viewIndex + 1]} <ChevronRight size={16} />
                         </button>
                     ) : (
-                        <a
-                            href="/report"
+                        <button
                             onClick={e => {
                                 const missing = domainGoals.find(g => !hasTimeSet(g, tasks));
                                 if (missing) {
                                     e.preventDefault();
                                     setToast('请先为愿景设置时间或拆解目标');
+                                    return;
                                 }
+
+                                // Navigate to report with code
+                                const params = new URLSearchParams(window.location.search);
+                                const code = params.get('code');
+                                window.location.href = `/report${code ? `?code=${code}` : ''}`;
                             }}
                             style={{
-                                flex: 1, padding: '12px', borderRadius: '16px',
+                                flex: 1, padding: '12px', borderRadius: '16px', border: 'none', cursor: 'pointer',
                                 textDecoration: 'none', fontWeight: 800, fontSize: '14px',
                                 background: 'linear-gradient(135deg,#6366f1,#4ade80)',
                                 color: '#fff',
@@ -815,10 +820,10 @@ export default function TaskDecomposition({ onBack }: { onBack?: () => void }) {
                             }}
                         >
                             ✨ 生成年度报告
-                        </a>
+                        </button>
                     )}
                 </div>
-            </div>
+            </div >
         </>
     );
 }

@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import type { Domain } from '../store/useStore';
-import { X, Plus, Trash2, ArrowRight, Lightbulb, CheckCircle2, ChevronDown, ChevronUp, Edit2 } from 'lucide-react';
+import { X, Trash2, ArrowRight, Lightbulb, CheckCircle2, ChevronDown, ChevronUp, Edit2, Sparkles, Loader2, AlertCircle } from 'lucide-react';
+// Removed unused Firebase imports: import { getFunctions, httpsCallable } from 'firebase/functions';
+// Removed unused Firebase imports: import { app } from '../firebase';
 
 interface GoalModalProps {
     domain: Domain;
@@ -132,6 +134,8 @@ export default function GoalModal({ domain, isOpen, onClose }: GoalModalProps) {
     const [newTitle, setNewTitle] = useState('');
     const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
     const [editingTitle, setEditingTitle] = useState('');
+    const [isAiLoading, setIsAiLoading] = useState(false);
+    const { addTask } = useStore();
 
     // Tutorial state - show if no goals in this domain yet
     const domainGoals = goals.filter(g => g.domain === domain);
@@ -141,7 +145,7 @@ export default function GoalModal({ domain, isOpen, onClose }: GoalModalProps) {
     // Sync with global modal state and lock body scroll
     useEffect(() => {
         if (isOpen) {
-            setActiveModal(`goal-${domain}`);
+            setActiveModal(`goal - ${domain} `);
 
             // "Nuclear" scroll lock for mobile to prevent all wobble
             const scrollY = window.scrollY;
@@ -152,7 +156,7 @@ export default function GoalModal({ domain, isOpen, onClose }: GoalModalProps) {
 
             document.body.style.overflow = 'hidden';
             document.body.style.position = 'fixed';
-            document.body.style.top = `-${scrollY}px`;
+            document.body.style.top = `- ${scrollY} px`;
             document.body.style.width = '100%';
             document.body.style.overflowX = 'hidden';
 
@@ -170,12 +174,80 @@ export default function GoalModal({ domain, isOpen, onClose }: GoalModalProps) {
 
     if (!isOpen) return null;
 
-    const handleAdd = (customTitle?: string) => {
+    const handleAdd = async (customTitle?: string) => {
         const titleToAdd = customTitle || newTitle.trim();
         if (!titleToAdd) return;
         if (domainGoals.length >= 3) return;
+
+        // Add goal synchronously
         addGoal({ domain, title: titleToAdd });
         setNewTitle('');
+
+        // Extract code from URL
+        const params = new URLSearchParams(window.location.search);
+        const code = params.get('code');
+
+        if (!code) {
+            console.log("No access code provided, skipping AI decomposition");
+            return;
+        }
+
+        // Trigger AI decomposition automatically
+        setIsAiLoading(true);
+        try {
+            const response = await fetch('/api/decompose-vision', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    code: code,
+                    vision: titleToAdd,
+                    domain: domain
+                })
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || '请求 AI 服务失败');
+            }
+
+            if (result.data && result.data.tasks && Array.isArray(result.data.tasks)) {
+                // The Goal has just been added, we need to find its generated ID
+                // Since we don't have the returned ID directly from addGoal, we can look it up by title and domain
+                // Note: this assumes titles are unique within a domain for this exact moment
+                setTimeout(() => {
+                    const updatedGoals = useStore.getState().goals;
+                    const latestGoal = updatedGoals.find(g => g.title === titleToAdd && g.domain === domain);
+                    if (latestGoal) {
+                        // Add all suggested tasks
+                        result.data.tasks.forEach((taskTitle: string) => {
+                            // Assuming DeepSeek returns something like "目标1: 早起跑步"
+                            // Let's clean the string slightly if it starts with "目标X: "
+                            const cleanTitle = taskTitle.replace(/^目标\d+[:：]\s*/, '').trim();
+                            addTask({
+                                goalId: latestGoal.id,
+                                title: cleanTitle,
+                                type: 'project', // Default new tasks to project for now
+                                startDate: '', // User will set these later
+                                endDate: '',
+                                painScore: 5,
+                                passionScore: 5,
+                                timingScore: 5,
+                                hidden: false
+                            });
+                        });
+                        // Show a toast or feedback (optional)
+                        console.log("AI decomposition success!");
+                    }
+                }, 500); // small delay to wait for zustand state to flush
+            }
+
+        } catch (e: any) {
+            console.error("AI Decomposition failed:", e);
+            alert(e.message || "智能拆解失败，请重试");
+        } finally {
+            setIsAiLoading(false);
+        }
     };
 
     return (
@@ -303,6 +375,17 @@ export default function GoalModal({ domain, isOpen, onClose }: GoalModalProps) {
                                     ))}
                                 </div>
 
+                                {/* Loading Overlay */}
+                                {isAiLoading && (
+                                    <div className="absolute inset-0 z-50 bg-white/80 backdrop-blur-sm rounded-3xl flex flex-col items-center justify-center">
+                                        <Loader2 size={32} className="text-indigo-500 animate-spin mb-4" />
+                                        <p className="text-slate-800 font-bold text-lg">AI 智能规划师正在思考...</p>
+                                        <p className="text-slate-500 text-sm mt-2 max-w-[80%] text-center">
+                                            正在结合您的领域为您量身定制行动步骤，这可能需要约 10-15 秒的时间
+                                        </p>
+                                    </div>
+                                )}
+
                                 {domainGoals.length < 3 && (
                                     <div className="relative flex items-center shadow-sm group">
                                         <input
@@ -315,10 +398,10 @@ export default function GoalModal({ domain, isOpen, onClose }: GoalModalProps) {
                                         />
                                         <button
                                             onClick={() => handleAdd()}
-                                            disabled={!newTitle.trim()}
+                                            disabled={!newTitle.trim() || isAiLoading}
                                             className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 gradient-primary text-white rounded-xl hover:brightness-110 disabled:opacity-0 disabled:scale-75 transition-all duration-300 flex items-center justify-center shadow-lg shadow-indigo-200"
                                         >
-                                            <Plus size={20} />
+                                            <Sparkles size={18} />
                                         </button>
                                     </div>
                                 )}

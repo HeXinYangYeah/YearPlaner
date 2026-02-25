@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronRight, ChevronLeft, Calendar, BarChart3, ListTodo, HelpCircle } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Calendar, BarChart3, ListTodo, HelpCircle, Loader2 } from 'lucide-react';
 import GoalGrid from '../components/GoalGrid';
 import TimeBudgetSettings from '../components/TimeBudgetSettings';
 import TaskDecomposition from '../components/TaskDecomposition';
@@ -14,6 +14,7 @@ const STEPS = [
 export default function Home() {
     const [currentStep, setCurrentStep] = useState(1);
     const [validationError, setValidationError] = useState<string | null>(null);
+    const [isConsumingUsage, setIsConsumingUsage] = useState(false);
     const { setShowTutorial, showTutorial, theme, goals, activeModal } = useStore();
 
     const validateStep = (step: number) => {
@@ -31,13 +32,50 @@ export default function Home() {
         return null;
     };
 
-    const nextStep = () => {
+    const nextStep = async () => {
         const error = validateStep(currentStep);
         if (error) {
             setValidationError(error);
             setTimeout(() => setValidationError(null), 5000);
             return;
         }
+
+        // If moving from Step 1 to Step 2, validate and consume access code usage
+        if (currentStep === 1) {
+            const params = new URLSearchParams(window.location.search);
+            const code = params.get('code');
+
+            if (!code) {
+                setValidationError('未检测到有效邀请码，无法继续。请通过专属链接重新访问。');
+                setTimeout(() => setValidationError(null), 5000);
+                return;
+            }
+
+            setIsConsumingUsage(true);
+            try {
+                const response = await fetch('/api/consume-usage', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code })
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.data && result.data.success) {
+                    console.log('Usage consumed successfully');
+                } else {
+                    throw new Error(result.error || '扣除使用次数失败');
+                }
+            } catch (err: any) {
+                console.error("Usage consumption failed:", err);
+                setValidationError(err.message || '邀请码无效、过期或次数已用完，无法生成计划。');
+                setTimeout(() => setValidationError(null), 5000);
+                setIsConsumingUsage(false);
+                return;
+            }
+            setIsConsumingUsage(false);
+        }
+
         if (currentStep < 3) {
             setCurrentStep(currentStep + 1);
             setValidationError(null);
@@ -199,10 +237,20 @@ export default function Home() {
                         {currentStep < 3 ? (
                             <button
                                 onClick={nextStep}
-                                className="flex-[2] gradient-primary text-white py-4 rounded-2xl font-black shadow-lg shadow-indigo-200 hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2"
+                                disabled={isConsumingUsage}
+                                className="flex-[2] gradient-primary text-white py-4 rounded-2xl font-black shadow-lg shadow-indigo-200 hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
                             >
-                                下一步
-                                <ChevronRight size={20} />
+                                {isConsumingUsage ? (
+                                    <>
+                                        正在验证与保存进度...
+                                        <Loader2 size={20} className="animate-spin" />
+                                    </>
+                                ) : (
+                                    <>
+                                        下一步
+                                        <ChevronRight size={20} />
+                                    </>
+                                )}
                             </button>
                         ) : (
                             <div className="flex-[2] text-center text-xs font-bold text-emerald-500 flex flex-col items-center px-4">

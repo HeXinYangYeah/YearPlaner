@@ -126,10 +126,11 @@ export default function BentoGrid({ allocations, goals, isDark = false }: BentoG
                 const maxKw = area > 2000 ? 5 : area > 1000 ? 3 : 2;
                 const keywords = getSortedKeywords(goals, domain, tasks).slice(0, maxKw);
 
-                // Dynamically calculate font size based on block dimensions to fill space without overflowing logic
-                const kwCount = Math.max(1, keywords.length);
-                const titleSize = Math.max(10, Math.min(28, block.h * 0.6));
-                const kwSize = Math.max(9, Math.min(24, (block.h * 0.9) / kwCount));
+                // Use container query units to scale font size dynamically based on the block's actual width/height
+                const titleSize = 'clamp(16px, 18cqmin, 28px)'; // Scale with the smaller dimension of the container
+                const kwSize = 'clamp(10px, 12cqmin, 14px)';
+                const tagVerticalPadding = 'clamp(2px, 3cqmin, 6px)';
+                const tagHorizontalPadding = 'clamp(6px, 4cqmin, 10px)';
 
                 return (
                     <div
@@ -161,16 +162,17 @@ export default function BentoGrid({ allocations, goals, isDark = false }: BentoG
                             {/* Domain label */}
                             <div
                                 style={{
-                                    fontSize: `${titleSize}px`,
+                                    fontSize: titleSize,
                                     fontWeight: 900,
                                     color: style.textColor,
                                     letterSpacing: '-0.3px',
-                                    wordBreak: 'keep-all', // allows word to wrap like 休闲\n娱乐 instead of truncation
+                                    wordBreak: 'normal',
                                     overflow: 'hidden',
                                     display: '-webkit-box',
                                     WebkitLineClamp: 2,
                                     WebkitBoxOrient: 'vertical',
                                     flexShrink: 0,
+                                    lineHeight: '1.2',
                                 }}
                             >
                                 {domain}
@@ -201,15 +203,18 @@ export default function BentoGrid({ allocations, goals, isDark = false }: BentoG
                                     <span
                                         key={i}
                                         style={{
-                                            fontSize: `${kwSize}px`,
+                                            fontSize: kwSize,
                                             fontWeight: 800,
                                             color: style.textColor,
                                             background: style.tagBg,
-                                            padding: `${Math.max(3, kwSize * 0.2)}px ${Math.max(6, kwSize * 0.4)}px`,
+                                            padding: `${tagVerticalPadding} ${tagHorizontalPadding}`,
                                             borderRadius: '6px',
                                             lineHeight: 1.35,
                                             wordBreak: 'break-word',
-                                            // No WebkitLineClamp restriction, let natural wrapping occur
+                                            overflow: 'hidden',
+                                            display: '-webkit-box',
+                                            WebkitLineClamp: 4, // Limit lines to avoid bleeding
+                                            WebkitBoxOrient: 'vertical',
                                         }}
                                     >
                                         {kw}
